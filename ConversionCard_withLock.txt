@@ -1,0 +1,95 @@
+//  src\components\ConversionCard.tsx
+
+import { motion } from 'framer-motion';
+import { 
+  FileImage, 
+  FileText, 
+  FileSpreadsheet, 
+  ArrowRight,
+  Lock
+} from 'lucide-react';
+import type { ConversionOption } from '@/types/converter';
+import { cn } from '@/lib/utils';
+
+interface ConversionCardProps {
+  option: ConversionOption;
+  isSelected: boolean;
+  onClick: () => void;
+  index: number;
+}
+
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  image: FileImage,
+  pdf: FileText,
+  word: FileText,
+  excel: FileSpreadsheet,
+};
+
+export function ConversionCard({ option, isSelected, onClick, index }: ConversionCardProps) {
+  const Icon = iconMap[option.icon] || FileText;
+  
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: index * 0.05 }}
+      whileHover={{ scale: option.available ? 1.02 : 1 }}
+      whileTap={{ scale: option.available ? 0.98 : 1 }}
+      onClick={onClick}
+      disabled={!option.available}
+      className={cn(
+        "relative w-full p-5 rounded-2xl text-left transition-all duration-300",
+        "border-2 group",
+        isSelected 
+          ? "border-primary bg-primary/5 shadow-elevated" 
+          : "border-border bg-card hover:border-primary/30 hover:shadow-soft",
+        !option.available && "opacity-60 cursor-not-allowed"
+      )}
+    >
+      {!option.available && (
+        <div className="absolute top-3 right-3">
+          <Lock className="w-4 h-4 text-muted-foreground" />
+        </div>
+      )}
+      
+      <div className="flex items-start gap-4">
+        <div className={cn(
+          "p-3 rounded-xl transition-all duration-300",
+          isSelected 
+            ? "bg-gradient-primary text-primary-foreground" 
+            : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+        )}>
+          <Icon className="w-5 h-5" />
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-display font-semibold text-foreground truncate">
+              {option.title}
+            </h3>
+            {isSelected && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="w-2 h-2 rounded-full bg-primary"
+              />
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground line-clamp-2">
+            {option.description}
+          </p>
+          
+          <div className="flex items-center gap-2 mt-3">
+            <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-md">
+              {option.inputFormats.join(', ')}
+            </span>
+            <ArrowRight className="w-3 h-3 text-muted-foreground" />
+            <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-md">
+              {option.outputFormat}
+            </span>
+          </div>
+        </div>
+      </div>
+    </motion.button>
+  );
+}

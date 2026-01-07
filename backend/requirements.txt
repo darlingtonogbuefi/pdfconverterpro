@@ -1,0 +1,71 @@
+# =========================
+# Core API & Server
+# =========================
+fastapi
+uvicorn[standard]
+python-multipart
+
+# =========================
+# Security & Auth
+# =========================
+python-jose[cryptography]   # JWT authentication
+slowapi                     # Rate limiting
+
+# =========================
+# PDF ↔ Office
+# =========================
+pdf2docx
+python-docx
+openpyxl
+python-pptx
+docx2pdf
+
+# =========================
+# PDF Processing
+# =========================
+PyMuPDF
+PyPDF2
+pdf2image
+reportlab
+fpdf
+fpdf2
+pikepdf
+pydantic
+typing
+docx
+pypandoc
+
+# =========================
+# OCR & Images
+# =========================
+Pillow
+pytesseract
+paddleocr                   # OCR engine
+paddlepaddle               # Deep learning backend for PaddleOCR
+pdfplumber
+tabula
+# =========================
+# Data & Tables
+# =========================
+pandas
+camelot-py[cv]
+opencv-python               # Required by camelot-py[cv]
+
+# =========================
+# Compression (system tool wrapper)
+# =========================
+ghostscript
+
+# =========================
+# Machine Learning / Clustering
+# =========================
+scikit-learn
+
+
+# =========================
+# Optional system dependencies (NOT pip)
+# =========================
+# libreoffice  → for high-fidelity PPT → PDF
+# poppler-utils → required by pdf2image
+# tesseract-ocr → required by pytesseract
+
