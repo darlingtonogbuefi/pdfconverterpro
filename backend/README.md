@@ -1,40 +1,48 @@
-# FastAPI File Converter Backend
+# Welcome to pdfconverterpro project
 
-A Python FastAPI backend for file conversions (PDF, Word, Excel).
+Follow these steps:
 
-## Setup
+```sh
+# Step 1: Clone the repository using the project's Git URL.
+git clone <YOUR_GIT_URL>
 
-1. Create a virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Step 2: Navigate to the project directory.
+cd <YOUR_PROJECT_NAME>
+
+# Step 3: Install the necessary dependencies.
+npm i
+
+# Step 4: Start the development server with auto-reloading and an instant preview.
+npm run dev
 ```
 
-2. Install dependencies:
-```bash
-pip install fastapi uvicorn python-multipart pdf2docx PyMuPDF python-docx reportlab openpyxl tabula-py pytesseract Pillow
-```
+**Edit a file directly in GitHub**
 
-3. Install Tesseract OCR (for image-to-text):
-- **macOS**: `brew install tesseract`
-- **Ubuntu**: `sudo apt-get install tesseract-ocr`
-- **Windows**: Download from https://github.com/UB-Mannheim/tesseract/wiki
+- Navigate to the desired file(s).
+- Click the "Edit" button (pencil icon) at the top right of the file view.
+- Make your changes and commit the changes.
 
-4. Run the server:
-```bash
-uvicorn main:app --reload --port 8000
-```
+**Use GitHub Codespaces**
 
-## API Endpoints
+- Navigate to the main page of your repository.
+- Click on the "Code" button (green button) near the top right.
+- Select the "Codespaces" tab.
+- Click on "New codespace" to launch a new Codespace environment.
+- Edit files directly within the Codespace and commit and push your changes once you're done.
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | Health check |
-| `/api/convert/pdf-to-word` | POST | Convert PDF to DOCX |
-| `/api/convert/word-to-pdf` | POST | Convert DOCX to PDF |
-| `/api/convert/pdf-to-excel` | POST | Convert PDF tables to XLSX |
-| `/api/convert/excel-to-pdf` | POST | Convert XLSX to PDF |
+## What technologies are used for this project?
 
-## Environment Variables
+This project is built with:
 
-Set `FRONTEND_URL` to allow CORS from your frontend (default: `http://localhost:5173`).
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
+
+
+Yes, you can!
+
+To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+
+Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
