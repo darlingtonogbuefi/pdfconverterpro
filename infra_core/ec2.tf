@@ -54,7 +54,6 @@ resource "aws_instance" "api" {
   iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
   vpc_security_group_ids = [aws_security_group.api_sg.id]
   subnet_id              = aws_subnet.private_1.id
-  # user_data removed, default Ubuntu user will be used
 
   tags = {
     Name        = "${var.project_name}-api-${var.environment}"
@@ -64,6 +63,35 @@ resource "aws_instance" "api" {
 
   monitoring              = true
   disable_api_termination = false
+
+  # ------------------------------
+  # User data: install SSM & bootstrap API repo
+  # ------------------------------
+  user_data = <<-EOF
+              #!/bin/bash
+              set -e
+
+              # Install SSM agent
+              sudo snap install amazon-ssm-agent --classic
+              sudo systemctl enable amazon-ssm-agent
+              sudo systemctl start amazon-ssm-agent
+
+              # Optional: clone repo if missing
+              cd /home/ubuntu
+              if [ ! -d pdfconverterpro ]; then
+                  git clone <your-github-repo-url> pdfconverterpro
+              fi
+
+              # Set up Python environment
+              cd pdfconverterpro
+              python3 -m venv venv || true
+              source venv/bin/activate
+              pip install --upgrade pip
+              pip install -r requirements.txt
+
+              # Start API service (systemd or fallback)
+              sudo systemctl restart pdfconvertpro-api || nohup python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
+              EOF
 }
 
 # ============================
@@ -76,7 +104,6 @@ resource "aws_instance" "worker" {
   iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
   vpc_security_group_ids = [aws_security_group.worker_sg.id]
   subnet_id              = aws_subnet.private_2.id
-  # user_data removed, default Ubuntu user will be used
 
   tags = {
     Name        = "${var.project_name}-worker-${var.environment}"
@@ -86,4 +113,17 @@ resource "aws_instance" "worker" {
 
   monitoring              = true
   disable_api_termination = false
+
+  # ------------------------------
+  # User data: install SSM agent
+  # ------------------------------
+  user_data = <<-EOF
+              #!/bin/bash
+              set -e
+
+              # Install SSM agent
+              sudo snap install amazon-ssm-agent --classic
+              sudo systemctl enable amazon-ssm-agent
+              sudo systemctl start amazon-ssm-agent
+              EOF
 }
