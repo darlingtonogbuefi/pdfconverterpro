@@ -1,7 +1,6 @@
 # Deploy Backend & Worker to EC2
 # .github/workflows/deploy-backend.yml
 
-
 name: Deploy Backend & Worker to EC2
 
 on:
@@ -35,22 +34,18 @@ jobs:
       # Debug SSH host for backend
       - name: Debug SSH host (Backend)
         run: |
-          echo "SSH action trying to connect to backend host: ${{ secrets.API_HOST }}"
-
-      # Test SSH connectivity to backend
-      - name: Test SSH connectivity (Backend)
-        run: |
-          nc -vz -w 5 ${{ secrets.API_HOST }} 22 || echo "Warning: Backend host not reachable on port 22"
+          echo "SSH action trying to connect to backend host (private IP): ${{ secrets.API_HOST }}"
+          echo "Through bastion host: ${{ secrets.BASTION_HOST }}"
 
       # Deploy backend to API EC2 via SSH (through Bastion)
       - name: Deploy backend to API EC2
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.API_HOST }}
+          host: ${{ secrets.API_HOST }}          # private IP
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
-          proxy_host: ${{ secrets.BASTION_HOST }}
+          proxy_host: ${{ secrets.BASTION_HOST }}   # public bastion IP
           proxy_username: ${{ secrets.BASTION_USER }}
           proxy_key: ${{ secrets.EC2_SSH_KEY }}
           proxy_port: 22
@@ -66,22 +61,18 @@ jobs:
       # Debug SSH host for worker
       - name: Debug SSH host (Worker)
         run: |
-          echo "SSH action trying to connect to worker host: ${{ secrets.WORKER_HOST }}"
-
-      # Test SSH connectivity to worker
-      - name: Test SSH connectivity (Worker)
-        run: |
-          nc -vz -w 5 ${{ secrets.WORKER_HOST }} 22 || echo "Warning: Worker host not reachable on port 22"
+          echo "SSH action trying to connect to worker host (private IP): ${{ secrets.WORKER_HOST }}"
+          echo "Through bastion host: ${{ secrets.BASTION_HOST }}"
 
       # Deploy worker to Worker EC2 via SSH (through Bastion)
       - name: Deploy worker to Worker EC2
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.WORKER_HOST }}
+          host: ${{ secrets.WORKER_HOST }}       # private IP
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
-          proxy_host: ${{ secrets.BASTION_HOST }}
+          proxy_host: ${{ secrets.BASTION_HOST }}   # public bastion IP
           proxy_username: ${{ secrets.BASTION_USER }}
           proxy_key: ${{ secrets.EC2_SSH_KEY }}
           proxy_port: 22
