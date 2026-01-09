@@ -1,6 +1,3 @@
-# .github/workflows/deploy-backend.yml
-
-
 name: Deploy Backend & Worker to EC2
 
 on:
@@ -31,6 +28,11 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
+      # Debug SSH host for backend
+      - name: Debug SSH host (Backend)
+        run: |
+          echo "SSH action trying to connect to backend host: ${{ secrets.API_HOST }}"
+
       # Deploy backend to API EC2 via SSH (through Bastion)
       - name: Deploy backend to API EC2
         uses: appleboy/ssh-action@v1
@@ -51,6 +53,11 @@ jobs:
             # restart backend service
             sudo systemctl restart pdfconvertpro-api || \
             nohup uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
+
+      # Debug SSH host for worker
+      - name: Debug SSH host (Worker)
+        run: |
+          echo "SSH action trying to connect to worker host: ${{ secrets.WORKER_HOST }}"
 
       # Deploy worker to Worker EC2 via SSH (through Bastion)
       - name: Deploy worker to Worker EC2
