@@ -1,3 +1,7 @@
+# Deploy Backend & Worker to EC2
+# .github/workflows/deploy-backend.yml
+
+
 name: Deploy Backend & Worker to EC2
 
 on:
@@ -33,6 +37,11 @@ jobs:
         run: |
           echo "SSH action trying to connect to backend host: ${{ secrets.API_HOST }}"
 
+      # Test SSH connectivity to backend
+      - name: Test SSH connectivity (Backend)
+        run: |
+          nc -vz -w 5 ${{ secrets.API_HOST }} 22 || echo "Warning: Backend host not reachable on port 22"
+
       # Deploy backend to API EC2 via SSH (through Bastion)
       - name: Deploy backend to API EC2
         uses: appleboy/ssh-action@v1
@@ -58,6 +67,11 @@ jobs:
       - name: Debug SSH host (Worker)
         run: |
           echo "SSH action trying to connect to worker host: ${{ secrets.WORKER_HOST }}"
+
+      # Test SSH connectivity to worker
+      - name: Test SSH connectivity (Worker)
+        run: |
+          nc -vz -w 5 ${{ secrets.WORKER_HOST }} 22 || echo "Warning: Worker host not reachable on port 22"
 
       # Deploy worker to Worker EC2 via SSH (through Bastion)
       - name: Deploy worker to Worker EC2
