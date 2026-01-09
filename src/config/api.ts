@@ -4,7 +4,7 @@
 
 
 export const API_CONFIG = {
-  baseUrl: import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000',
+  baseUrl: import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000' ,
   endpoints: {
   health: '/health',
   pdfToWord: '/api/convert/pdf-to-word',
