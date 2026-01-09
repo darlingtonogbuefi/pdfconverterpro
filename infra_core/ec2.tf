@@ -57,7 +57,9 @@ resource "aws_instance" "api" {
   # user_data removed, default Ubuntu user will be used
 
   tags = {
-    Name = "${var.project_name}-api-${var.environment}"
+    Name        = "${var.project_name}-api-${var.environment}"
+    Role        = "api"
+    Environment = var.environment
   }
 
   monitoring              = true
@@ -77,7 +79,9 @@ resource "aws_instance" "worker" {
   # user_data removed, default Ubuntu user will be used
 
   tags = {
-    Name = "${var.project_name}-worker-${var.environment}"
+    Name        = "${var.project_name}-worker-${var.environment}"
+    Role        = "worker"
+    Environment = var.environment
   }
 
   monitoring              = true

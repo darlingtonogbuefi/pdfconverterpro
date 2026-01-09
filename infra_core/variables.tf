@@ -93,3 +93,11 @@ variable "ssh_public_key_path" {
   type        = string
   default     = "C:\\Users\\MAGNUM\\.ssh\\my-new-ec2-key.pub"
 }
+
+
+# GitHub repo for OIDC trust
+variable "github_oidc_repo" {
+  description = "GitHub repository OIDC subject for IAM role"
+  type        = string
+  default = "repo:darlingtonogbuefi/pdfconverterpro:*"
+}

@@ -24,7 +24,9 @@ resource "aws_security_group" "bastion_sg" {
   }
 
   tags = {
-    Name = "${var.project_name}-bastion-sg"
+    Name        = "${var.project_name}-bastion-sg"
+    Role        = "bastion"
+    Environment = var.environment
   }
 }
 
@@ -40,7 +42,9 @@ resource "aws_instance" "bastion" {
   # user_data removed, default Amazon Linux user will be used
 
   tags = {
-    Name = "${var.project_name}-bastion"
+    Name        = "${var.project_name}-bastion"
+    Role        = "bastion"
+    Environment = var.environment
   }
 
   monitoring              = true

@@ -1,90 +1,68 @@
 # Deploy Backend & Worker to EC2 using SSH jump (bastion)
 # .github/workflows/deploy-backend.yml
 
-name: Deploy Backend & Worker to EC2
+name: Deploy Backend & Worker to EC2 (SSM + OIDC)
 
 on:
   push:
     branches:
       - main
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout repo
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # Setup Python
-      - name: Setup Python
-        uses: actions/setup-python@v4
+      # 🔹 Assume AWS role via OIDC
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          python-version: '3.11'
+          role-to-assume: arn:aws:iam::<AWS_ACCOUNT_ID>:role/pdfconvertpro-github-actions-role
+          aws-region: us-east-1
 
-      # Install backend dependencies locally (needed for venv)
-      - name: Install backend dependencies
+      # ============================
+      # DEPLOY API
+      # ============================
+
+      - name: Deploy API via SSM
         run: |
-          python -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
+          aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --targets "Key=tag:Role,Values=api" \
+            --comment "Deploy API from GitHub Actions" \
+            --parameters '{
+              "commands": [
+                "cd /home/ubuntu/pdfconverterpro",
+                "git pull origin main",
+                "source venv/bin/activate || true",
+                "pip install -r requirements.txt",
+                "sudo systemctl restart pdfconvertpro-api || nohup uvicorn backend.main:app --host 0.0.0.0 --port 8000 &"
+              ]
+            }'
 
-      # Debug SSH host for backend
-      - name: Debug SSH host (Backend)
+      # ============================
+      # DEPLOY WORKER
+      # ============================
+
+      - name: Deploy Worker via SSM
         run: |
-          echo "SSH action trying to connect to backend host (private IP): ${{ secrets.API_HOST }}"
-          echo "Through bastion host: ${{ secrets.BASTION_HOST }}"
-
-      # Deploy backend via SSH jump using temporary key file
-      - name: Deploy backend via SSH
-        run: |
-          # Write PEM key to temporary file
-          echo "${{ secrets.EC2_SSH_KEY }}" > ec2_key.pem
-          chmod 600 ec2_key.pem
-
-          # SSH into backend via bastion
-          ssh -o StrictHostKeyChecking=no \
-              -i ec2_key.pem \
-              -J ${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }} \
-              ${{ secrets.EC2_USER }}@${{ secrets.API_HOST }} << 'EOF'
-                cd ~/pdfconverterpro
-                git pull origin main
-                source venv/bin/activate
-                pip install -r requirements.txt
-                # restart backend service
-                sudo systemctl restart pdfconvertpro-api || nohup uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
-          EOF
-
-          # Clean up temporary key file
-          rm -f ec2_key.pem
-
-      # Debug SSH host for worker
-      - name: Debug SSH host (Worker)
-        run: |
-          echo "SSH action trying to connect to worker host (private IP): ${{ secrets.WORKER_HOST }}"
-          echo "Through bastion host: ${{ secrets.BASTION_HOST }}"
-
-      # Deploy worker via SSH jump using temporary key file
-      - name: Deploy worker via SSH
-        run: |
-          # Write PEM key to temporary file
-          echo "${{ secrets.EC2_SSH_KEY }}" > ec2_key.pem
-          chmod 600 ec2_key.pem
-
-          # SSH into worker via bastion
-          ssh -o StrictHostKeyChecking=no \
-              -i ec2_key.pem \
-              -J ${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }} \
-              ${{ secrets.EC2_USER }}@${{ secrets.WORKER_HOST }} << 'EOF'
-                cd ~/pdfconverterpro
-                git pull origin main
-                source venv/bin/activate
-                pip install -r requirements.txt
-                # restart worker service
-                sudo systemctl restart pdfconvertpro-worker || nohup python backend/worker.py &
-          EOF
-
-          # Clean up temporary key file
-          rm -f ec2_key.pem
+          aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --targets "Key=tag:Role,Values=worker" \
+            --comment "Deploy Worker from GitHub Actions" \
+            --parameters '{
+              "commands": [
+                "cd /home/ubuntu/pdfconverterpro",
+                "git pull origin main",
+                "source venv/bin/activate || true",
+                "pip install -r requirements.txt",
+                "sudo systemctl restart pdfconvertpro-worker || nohup python backend/worker.py &"
+              ]
+            }'
