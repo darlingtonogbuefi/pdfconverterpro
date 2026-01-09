@@ -1,0 +1,74 @@
+# .github/workflows/deploy-backend.yml
+
+
+name: Deploy Backend & Worker to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout repo
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      # Setup Python
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      # Install backend dependencies
+      - name: Install backend dependencies
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Deploy backend to API EC2 via SSH (through Bastion)
+      - name: Deploy backend to API EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.API_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          proxy_host: ${{ secrets.BASTION_HOST }}
+          proxy_username: ${{ secrets.BASTION_USER }}
+          proxy_key: ${{ secrets.EC2_SSH_KEY }}
+          proxy_port: 22
+          script: |
+            cd ~/pdfconverterpro
+            git pull origin main
+            source venv/bin/activate
+            pip install -r requirements.txt
+            # restart backend service
+            sudo systemctl restart pdfconvertpro-api || \
+            nohup uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
+
+      # Deploy worker to Worker EC2 via SSH (through Bastion)
+      - name: Deploy worker to Worker EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.WORKER_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          proxy_host: ${{ secrets.BASTION_HOST }}
+          proxy_username: ${{ secrets.BASTION_USER }}
+          proxy_key: ${{ secrets.EC2_SSH_KEY }}
+          proxy_port: 22
+          script: |
+            cd ~/pdfconverterpro
+            git pull origin main
+            source venv/bin/activate
+            pip install -r requirements.txt
+            # restart worker service
+            sudo systemctl restart pdfconvertpro-worker || \
+            nohup python backend/worker.py &
