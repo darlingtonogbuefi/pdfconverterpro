@@ -1,4 +1,4 @@
-# Deploy Backend & Worker to EC2
+# Deploy Backend & Worker to EC2 using SSH jump (bastion)
 # .github/workflows/deploy-backend.yml
 
 name: Deploy Backend & Worker to EC2
@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      # Install backend dependencies
+      # Install backend dependencies locally (needed for venv)
       - name: Install backend dependencies
         run: |
           python -m venv venv
@@ -37,26 +37,20 @@ jobs:
           echo "SSH action trying to connect to backend host (private IP): ${{ secrets.API_HOST }}"
           echo "Through bastion host: ${{ secrets.BASTION_HOST }}"
 
-      # Deploy backend to API EC2 via SSH (through Bastion)
-      - name: Deploy backend to API EC2
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.API_HOST }}          # private IP
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: 22
-          proxy_host: ${{ secrets.BASTION_HOST }}   # public bastion IP
-          proxy_username: ${{ secrets.BASTION_USER }}
-          proxy_key: ${{ secrets.EC2_SSH_KEY }}
-          proxy_port: 22
-          script: |
-            cd ~/pdfconverterpro
-            git pull origin main
-            source venv/bin/activate
-            pip install -r requirements.txt
-            # restart backend service
-            sudo systemctl restart pdfconvertpro-api || \
-            nohup uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
+      # Deploy backend via SSH jump
+      - name: Deploy backend via SSH
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+              -i ${{ secrets.EC2_SSH_KEY }} \
+              -J ${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }} \
+              ${{ secrets.EC2_USER }}@${{ secrets.API_HOST }} << 'EOF'
+                cd ~/pdfconverterpro
+                git pull origin main
+                source venv/bin/activate
+                pip install -r requirements.txt
+                # restart backend service
+                sudo systemctl restart pdfconvertpro-api || nohup uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
+          EOF
 
       # Debug SSH host for worker
       - name: Debug SSH host (Worker)
@@ -64,23 +58,17 @@ jobs:
           echo "SSH action trying to connect to worker host (private IP): ${{ secrets.WORKER_HOST }}"
           echo "Through bastion host: ${{ secrets.BASTION_HOST }}"
 
-      # Deploy worker to Worker EC2 via SSH (through Bastion)
-      - name: Deploy worker to Worker EC2
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.WORKER_HOST }}       # private IP
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: 22
-          proxy_host: ${{ secrets.BASTION_HOST }}   # public bastion IP
-          proxy_username: ${{ secrets.BASTION_USER }}
-          proxy_key: ${{ secrets.EC2_SSH_KEY }}
-          proxy_port: 22
-          script: |
-            cd ~/pdfconverterpro
-            git pull origin main
-            source venv/bin/activate
-            pip install -r requirements.txt
-            # restart worker service
-            sudo systemctl restart pdfconvertpro-worker || \
-            nohup python backend/worker.py &
+      # Deploy worker via SSH jump
+      - name: Deploy worker via SSH
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+              -i ${{ secrets.EC2_SSH_KEY }} \
+              -J ${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }} \
+              ${{ secrets.EC2_USER }}@${{ secrets.WORKER_HOST }} << 'EOF'
+                cd ~/pdfconverterpro
+                git pull origin main
+                source venv/bin/activate
+                pip install -r requirements.txt
+                # restart worker service
+                sudo systemctl restart pdfconvertpro-worker || nohup python backend/worker.py &
+          EOF
