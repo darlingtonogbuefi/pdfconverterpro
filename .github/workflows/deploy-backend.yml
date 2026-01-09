@@ -1,4 +1,4 @@
-# Deploy Backend & Worker to EC2 using SSH jump (bastion)
+# Deploy Backend & Worker to EC2 
 # .github/workflows/deploy-backend.yml
 name: Deploy Backend & Worker to EC2 (SSM + OIDC)
 
@@ -50,9 +50,11 @@ jobs:
               "commands": [
                 "cd /home/ubuntu/pdfconverterpro",
                 "git pull origin main",
-                "source venv/bin/activate || true",
+                "python3 -m venv venv || true",                       # Create venv if missing
+                "source venv/bin/activate",
+                "pip install --upgrade pip",
                 "pip install -r requirements.txt",
-                "sudo systemctl restart pdfconvertpro-api || nohup uvicorn backend.main:app --host 0.0.0.0 --port 8000 &"
+                "sudo systemctl restart pdfconvertpro-api || nohup python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 &"
               ]
             }'
 
@@ -69,7 +71,9 @@ jobs:
               "commands": [
                 "cd /home/ubuntu/pdfconverterpro",
                 "git pull origin main",
-                "source venv/bin/activate || true",
+                "python3 -m venv venv || true",                       # Create venv if missing
+                "source venv/bin/activate",
+                "pip install --upgrade pip",
                 "pip install -r requirements.txt",
                 "sudo systemctl restart pdfconvertpro-worker || nohup python backend/worker.py &"
               ]
