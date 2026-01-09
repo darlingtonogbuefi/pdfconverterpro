@@ -140,3 +140,8 @@ output "cloudfront_domain_name" {
   value       = aws_cloudfront_distribution.frontend.domain_name
   description = "CloudFront domain name for frontend access"
 }
+
+output "github_actions_role_arn" {
+  description = "The ARN of the IAM role assumed by GitHub Actions for deployment and automation tasks."
+  value       = aws_iam_role.github_actions.arn
+}
