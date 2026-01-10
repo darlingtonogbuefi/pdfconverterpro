@@ -45,7 +45,7 @@ jobs:
           # Sync build output to the frontend bucket
           aws s3 sync dist/ s3://${{ secrets.FRONTEND_S3_BUCKET }}/ --delete
           # Ensure index.html is the default root object for SPA
-          aws s3 cp dist/index.html s3://${{ secrets.FRONTEND_S3_BUCKET }}/index.html --acl public-read
+          aws s3 cp dist/index.html s3://${{ secrets.FRONTEND_S3_BUCKET }}/index.html
 
       # Invalidate CloudFront cache
       - name: Invalidate CloudFront
