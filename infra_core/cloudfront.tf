@@ -1,3 +1,5 @@
+# infra_core\cloudfront.tf
+
 # ============================
 # CloudFront OAI for Frontend
 # ============================
@@ -19,7 +21,9 @@ resource "aws_cloudfront_distribution" "frontend" {
     aws_s3_bucket_policy.files_policy
   ]
 
-  # S3 Origin
+  # ============================
+  # S3 Origin (Frontend SPA)
+  # ============================
   origin {
     domain_name = aws_s3_bucket.frontend.bucket_regional_domain_name
     origin_id   = "S3-${aws_s3_bucket.frontend.id}"
@@ -29,20 +33,26 @@ resource "aws_cloudfront_distribution" "frontend" {
     }
   }
 
+  # ============================
   # ALB / API Origin
+  # ============================
   origin {
     domain_name = "pdfconvertpro-alb-296469480.us-east-1.elb.amazonaws.com"
     origin_id   = "ALB-Backend"
 
+    # IMPORTANT:
+    # CloudFront connects to ALB over HTTP to avoid TLS/SNI mismatch
     custom_origin_config {
       http_port              = 80
       https_port             = 443
-      origin_protocol_policy = "https-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]  # <-- required by Terraform
     }
   }
 
+  # ============================
   # Default Cache Behavior (SPA / S3)
+  # ============================
   default_cache_behavior {
     target_origin_id       = "S3-${aws_s3_bucket.frontend.id}"
     viewer_protocol_policy = "redirect-to-https"
@@ -59,19 +69,32 @@ resource "aws_cloudfront_distribution" "frontend" {
     }
   }
 
+  # ============================
   # Ordered Cache Behavior for API
+  # ============================
   ordered_cache_behavior {
     path_pattern           = "/api/*"
     target_origin_id       = "ALB-Backend"
     viewer_protocol_policy = "redirect-to-https"
 
-    allowed_methods  = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
-    cached_methods   = ["GET", "HEAD"]
-    compress         = true
+    allowed_methods = [
+      "GET",
+      "HEAD",
+      "OPTIONS",
+      "PUT",
+      "POST",
+      "PATCH",
+      "DELETE"
+    ]
 
+    cached_methods = ["GET", "HEAD"]
+    compress       = true
+
+    # IMPORTANT:
+    # File uploads (multipart/form-data) require full header forwarding
     forwarded_values {
       query_string = true
-      headers      = ["Authorization", "Content-Type"]
+      headers      = ["*"]
       cookies {
         forward = "all"
       }
@@ -82,7 +105,9 @@ resource "aws_cloudfront_distribution" "frontend" {
     max_ttl     = 0
   }
 
+  # ============================
   # SPA support: serve index.html for 403/404
+  # ============================
   custom_error_response {
     error_code         = 403
     response_code      = 200
@@ -95,12 +120,21 @@ resource "aws_cloudfront_distribution" "frontend" {
     response_page_path = "/index.html"
   }
 
+  # ============================
   # Viewer Certificate
+  # ============================
+  # RECOMMENDED:
+  # Replace default certificate with ACM cert for:
+  # pdfconvertpro.cribr.co.uk (must be in us-east-1)
   viewer_certificate {
-    cloudfront_default_certificate = true
+    acm_certificate_arn      = var.certificate_arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
   }
 
+  # ============================
   # Geo Restrictions
+  # ============================
   restrictions {
     geo_restriction {
       restriction_type = "none"

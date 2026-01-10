@@ -66,7 +66,7 @@ output "sqs_queue_url" {
   description = "URL of the SQS jobs queue"
 }
 
-output "s3_bucket_name" {
+output "frontend_bucket_name" {
   value       = aws_s3_bucket.files.bucket
   description = "Name of the S3 bucket"
 }

@@ -44,20 +44,17 @@ resource "aws_lb_target_group_attachment" "api_attachment" {
 }
 
 # ============================
-# ALB Listener (HTTP -> HTTPS redirect)
+# ALB Listener (HTTP → forward to target group)
 # ============================
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.app.arn
   port              = 80
   protocol          = "HTTP"
 
+  # CHANGED: forward directly to target group instead of redirecting to HTTPS
   default_action {
-    type = "redirect"
-    redirect {
-      protocol    = "HTTPS"
-      port        = "443"
-      status_code = "HTTP_301"
-    }
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.api_tg.arn
   }
 }
 
