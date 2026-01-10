@@ -1,34 +1,35 @@
-# infra_core\cloudfront.tf
-
-# ---------------------------
-# CloudFront Distribution for Frontend S3 Bucket
-# ---------------------------
-
-# Origin Access Identity (OAI) to allow CloudFront to read S3 privately
-resource "aws_cloudfront_origin_access_identity" "frontend" {
-  comment = "OAI for frontend CloudFront distribution"
+# ============================
+# CloudFront OAI for Frontend
+# ============================
+resource "aws_cloudfront_origin_access_identity" "frontend_oai" {
+  comment = "OAI for ${var.project_name}-frontend-${var.environment}"
 }
 
+# ============================
 # CloudFront Distribution
+# ============================
 resource "aws_cloudfront_distribution" "frontend" {
   enabled = true
   comment = "CloudFront distribution for frontend S3 bucket"
 
-  # ---------------------------
-  # S3 Origin (Frontend SPA)
-  # ---------------------------
+  depends_on = [
+    aws_s3_bucket.frontend,
+    aws_s3_bucket.files,
+    aws_s3_bucket_policy.frontend_policy,
+    aws_s3_bucket_policy.files_policy
+  ]
+
+  # S3 Origin
   origin {
     domain_name = aws_s3_bucket.frontend.bucket_regional_domain_name
     origin_id   = "S3-${aws_s3_bucket.frontend.id}"
 
     s3_origin_config {
-      origin_access_identity = aws_cloudfront_origin_access_identity.frontend.cloudfront_access_identity_path
+      origin_access_identity = aws_cloudfront_origin_access_identity.frontend_oai.cloudfront_access_identity_path
     }
   }
 
-  # ---------------------------
-  # ALB Origin (Backend API)
-  # ---------------------------
+  # ALB / API Origin
   origin {
     domain_name = "pdfconvertpro-alb-296469480.us-east-1.elb.amazonaws.com"
     origin_id   = "ALB-Backend"
@@ -41,9 +42,7 @@ resource "aws_cloudfront_distribution" "frontend" {
     }
   }
 
-  # ---------------------------
   # Default Cache Behavior (SPA / S3)
-  # ---------------------------
   default_cache_behavior {
     target_origin_id       = "S3-${aws_s3_bucket.frontend.id}"
     viewer_protocol_policy = "redirect-to-https"
@@ -60,9 +59,7 @@ resource "aws_cloudfront_distribution" "frontend" {
     }
   }
 
-  # ---------------------------
-  # Ordered Cache Behavior for /api/* (ALB)
-  # ---------------------------
+  # Ordered Cache Behavior for API
   ordered_cache_behavior {
     path_pattern           = "/api/*"
     target_origin_id       = "ALB-Backend"
@@ -85,9 +82,7 @@ resource "aws_cloudfront_distribution" "frontend" {
     max_ttl     = 0
   }
 
-  # ---------------------------
   # SPA support: serve index.html for 403/404
-  # ---------------------------
   custom_error_response {
     error_code         = 403
     response_code      = 200
@@ -100,61 +95,15 @@ resource "aws_cloudfront_distribution" "frontend" {
     response_page_path = "/index.html"
   }
 
-  # ---------------------------
   # Viewer Certificate
-  # ---------------------------
   viewer_certificate {
     cloudfront_default_certificate = true
   }
 
-  # ---------------------------
   # Geo Restrictions
-  # ---------------------------
   restrictions {
     geo_restriction {
       restriction_type = "none"
     }
   }
-}
-
-# ---------------------------
-# Optional: S3 Bucket Policy to allow only CloudFront access to Frontend
-# ---------------------------
-resource "aws_s3_bucket_policy" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          AWS = aws_cloudfront_origin_access_identity.frontend.iam_arn
-        }
-        Action   = "s3:GetObject"
-        Resource = "${aws_s3_bucket.frontend.arn}/*"
-      }
-    ]
-  })
-}
-
-# ---------------------------
-# Existing Files Bucket CloudFront Policy (unchanged)
-# ---------------------------
-resource "aws_s3_bucket_policy" "files" {
-  bucket = aws_s3_bucket.files.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          AWS = aws_cloudfront_origin_access_identity.frontend.iam_arn
-        }
-        Action   = "s3:GetObject"
-        Resource = "${aws_s3_bucket.files.arn}/*"
-      }
-    ]
-  })
 }
