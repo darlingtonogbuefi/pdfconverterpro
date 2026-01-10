@@ -119,3 +119,9 @@ variable "frontend_bucket_name" {
   type        = string
   default     = "pdfconvertpro-frontend-prod"
 }
+
+variable "files_bucket_name" {
+  description = "Name of the S3 bucket used for storing backend files"
+  type        = string
+  default     = "pdfconvertpro-files-prod"
+}
