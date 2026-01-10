@@ -101,3 +101,10 @@ variable "github_oidc_repo" {
   type        = string
   default = "repo:darlingtonogbuefi/pdfconverterpro:*"
 }
+
+variable "pdfconverterpro_repo" {
+  description = "GitHub repository URL for pdfconverterpro"
+  type        = string
+  default     = "https://github.com/darlingtonogbuefi/pdfconverterpro.git"
+}
+

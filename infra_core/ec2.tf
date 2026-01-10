@@ -1,4 +1,4 @@
-# infra_core/ec2.tf
+# infra_core\ec2.tf
 
 # ============================
 # Amazon Linux AMI (Bastion)
@@ -71,15 +71,18 @@ resource "aws_instance" "api" {
               #!/bin/bash
               set -e
 
-              # Install SSM agent
+              # Install SSM agent via Snap
               sudo snap install amazon-ssm-agent --classic
-              sudo systemctl enable amazon-ssm-agent
-              sudo systemctl start amazon-ssm-agent
+              sudo snap enable amazon-ssm-agent
+              sudo snap start amazon-ssm-agent
 
-              # Optional: clone repo if missing
+              # Optional: clone or update repo
               cd /home/ubuntu
               if [ ! -d pdfconverterpro ]; then
-                  git clone <your-github-repo-url> pdfconverterpro
+                  git clone ${var.pdfconverterpro_repo} pdfconverterpro
+              else
+                  cd pdfconverterpro
+                  git pull origin main
               fi
 
               # Set up Python environment
@@ -115,15 +118,34 @@ resource "aws_instance" "worker" {
   disable_api_termination = false
 
   # ------------------------------
-  # User data: install SSM agent
+  # User data: install SSM & bootstrap Worker repo
   # ------------------------------
   user_data = <<-EOF
               #!/bin/bash
               set -e
 
-              # Install SSM agent
+              # Install SSM agent via Snap
               sudo snap install amazon-ssm-agent --classic
-              sudo systemctl enable amazon-ssm-agent
-              sudo systemctl start amazon-ssm-agent
+              sudo snap enable amazon-ssm-agent
+              sudo snap start amazon-ssm-agent
+
+              # Optional: clone or update repo
+              cd /home/ubuntu
+              if [ ! -d pdfconverterpro ]; then
+                  git clone ${var.pdfconverterpro_repo} pdfconverterpro
+              else
+                  cd pdfconverterpro
+                  git pull origin main
+              fi
+
+              # Set up Python environment
+              cd pdfconverterpro
+              python3 -m venv venv || true
+              source venv/bin/activate
+              pip install --upgrade pip
+              pip install -r requirements.txt
+
+              # Start Worker service (systemd or fallback)
+              sudo systemctl restart pdfconvertpro-worker || nohup python -m backend.worker --host 0.0.0.0 &
               EOF
 }

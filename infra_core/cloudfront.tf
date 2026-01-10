@@ -16,8 +16,8 @@ resource "aws_cloudfront_distribution" "frontend" {
 
   # ⚠ Must be singular `origin`
   origin {
-    domain_name = aws_s3_bucket.files.bucket_regional_domain_name
-    origin_id   = "S3-${aws_s3_bucket.files.id}"
+    domain_name = aws_s3_bucket.frontend.bucket_regional_domain_name
+    origin_id   = "S3-${aws_s3_bucket.frontend.id}"
 
     s3_origin_config {
       origin_access_identity = aws_cloudfront_origin_access_identity.frontend.cloudfront_access_identity_path
@@ -25,7 +25,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   }
 
   default_cache_behavior {
-    target_origin_id       = "S3-${aws_s3_bucket.files.id}"
+    target_origin_id       = "S3-${aws_s3_bucket.frontend.id}"
     viewer_protocol_policy = "redirect-to-https"
 
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
@@ -40,6 +40,19 @@ resource "aws_cloudfront_distribution" "frontend" {
     }
   }
 
+  # SPA support: serve index.html for 403/404
+  custom_error_response {
+    error_code            = 403
+    response_code         = 200
+    response_page_path    = "/index.html"
+  }
+
+  custom_error_response {
+    error_code            = 404
+    response_code         = 200
+    response_page_path    = "/index.html"
+  }
+
   viewer_certificate {
     cloudfront_default_certificate = true
   }
@@ -52,7 +65,28 @@ resource "aws_cloudfront_distribution" "frontend" {
 }
 
 # ---------------------------
-# Optional: S3 Bucket Policy to allow only CloudFront access
+# Optional: S3 Bucket Policy to allow only CloudFront access to Frontend
+# ---------------------------
+resource "aws_s3_bucket_policy" "frontend" {
+  bucket = aws_s3_bucket.frontend.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          AWS = aws_cloudfront_origin_access_identity.frontend.iam_arn
+        }
+        Action   = "s3:GetObject"
+        Resource = "${aws_s3_bucket.frontend.arn}/*"
+      }
+    ]
+  })
+}
+
+# ---------------------------
+# Existing Files Bucket CloudFront Policy (unchanged)
 # ---------------------------
 resource "aws_s3_bucket_policy" "files" {
   bucket = aws_s3_bucket.files.id

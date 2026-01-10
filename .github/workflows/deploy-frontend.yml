@@ -1,6 +1,4 @@
-# Deploy Frontend to S3 + CloudFront
 # .github/workflows/deploy-frontend.yml
-
 name: Deploy Frontend to S3 + CloudFront
 
 on:
@@ -41,10 +39,13 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # Deploy to S3 using AWS CLI
-      - name: Deploy to S3
+      # Deploy to frontend S3 bucket
+      - name: Deploy to Frontend S3
         run: |
-          aws s3 sync dist/ s3://${{ secrets.S3_BUCKET }}/ --delete
+          # Sync build output to the frontend bucket
+          aws s3 sync dist/ s3://${{ secrets.FRONTEND_S3_BUCKET }}/ --delete
+          # Ensure index.html is the default root object for SPA
+          aws s3 cp dist/index.html s3://${{ secrets.FRONTEND_S3_BUCKET }}/index.html --acl public-read
 
       # Invalidate CloudFront cache
       - name: Invalidate CloudFront
