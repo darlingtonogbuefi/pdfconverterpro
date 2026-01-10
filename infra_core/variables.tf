@@ -108,3 +108,8 @@ variable "pdfconverterpro_repo" {
   default     = "https://github.com/darlingtonogbuefi/pdfconverterpro.git"
 }
 
+variable "certificate_arn" {
+  description = "ARN of the ACM certificate for the HTTPS listener"
+  type        = string
+  default     = "arn:aws:acm:us-east-1:821878754659:certificate/b1bea28d-a671-4cf7-86af-df1c99ccfac8"
+}
