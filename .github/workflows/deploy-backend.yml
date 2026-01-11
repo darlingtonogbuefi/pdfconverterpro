@@ -1,4 +1,7 @@
 # .github/workflows/deploy-backend.yml
+
+
+
 name: Deploy Backend & Worker to EC2 (SSM + OIDC)
 
 on:
@@ -60,8 +63,10 @@ jobs:
         run: |
           cd infra_core
           # Convert JSON list to space-separated string for $GITHUB_ENV
-          API_IDS=$(terraform output -json api_instance_ids | jq -r '.[]' | tr '\n' ' ')
+          API_IDS=$(terraform output -json api_instance_ids | jq -r '.[]' | xargs)
           echo "API_INSTANCE_IDS=$API_IDS" >> $GITHUB_ENV
+          # Debug: show what was received
+          echo "DEBUG: Retrieved API instance IDs: $API_IDS"
 
       # ============================
       # Get Worker Instance IDs from Terraform (safe for lists)
@@ -70,14 +75,17 @@ jobs:
         id: tf_worker
         run: |
           cd infra_core
-          WORKER_IDS=$(terraform output -json worker_instance_ids | jq -r '.[]' | tr '\n' ' ')
+          WORKER_IDS=$(terraform output -json worker_instance_ids | jq -r '.[]' | xargs)
           echo "WORKER_IDS=$WORKER_IDS" >> $GITHUB_ENV
+          # Debug: show what was received
+          echo "DEBUG: Retrieved Worker instance IDs: $WORKER_IDS"
 
       # ============================
       # Deploy API via SSM using setup script
       # ============================
       - name: Deploy API via SSM
         run: |
+          echo "DEBUG: Using API_INSTANCE_IDS=$API_INSTANCE_IDS"
           aws ssm send-command \
             --document-name "AWS-RunShellScript" \
             --instance-ids $API_INSTANCE_IDS \
@@ -93,6 +101,7 @@ jobs:
       # ============================
       - name: Deploy Worker via SSM
         run: |
+          echo "DEBUG: Using WORKER_IDS=$WORKER_IDS"
           aws ssm send-command \
             --document-name "AWS-RunShellScript" \
             --instance-ids $WORKER_IDS \
