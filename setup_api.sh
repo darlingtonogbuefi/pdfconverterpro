@@ -198,7 +198,7 @@ else
     exit 1
 fi
 
-systemctl status "$SERVICE_NAME" --no-pager || echo "⚠️ Could not retrieve service status"
+systemctl status "$SERVICE_NAME" --no-pager || echo "Could not retrieve service status"
 
 # -----------------------------------
 # AWS SSM Agent (Snap) - last

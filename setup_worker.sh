@@ -20,11 +20,11 @@ log_step() {
 }
 
 log_success() {
-    echo "✅ SUCCESS: $1"
+    echo "SUCCESS: $1"
 }
 
 log_error() {
-    echo "❌ ERROR: $1"
+    echo "ERROR: $1"
 }
 
 # -----------------------------------
@@ -201,7 +201,7 @@ else
     exit 1
 fi
 
-systemctl status "$SERVICE_NAME" --no-pager || echo "⚠️ Could not retrieve service status"
+systemctl status "$SERVICE_NAME" --no-pager || echo "Could not retrieve service status"
 
 # -----------------------------------
 # AWS SSM Agent (Snap) - last
