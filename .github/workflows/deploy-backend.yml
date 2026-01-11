@@ -62,14 +62,14 @@ jobs:
           cd infra_core
           echo "DEBUG: Terraform API output:"
           
-          # Capture Terraform output
-          TF_API_OUTPUT=$(terraform output -json api_instance_ids 2>/dev/null)
+          # Capture Terraform output, filter out unwanted prefixes
+          TF_API_OUTPUT=$(terraform output -json api_instance_ids 2>/dev/null | grep '^\[')
           echo "DEBUG: Raw Terraform API output: $TF_API_OUTPUT"
 
           # Validate JSON
           echo "$TF_API_OUTPUT" | jq empty || { echo "ERROR: Invalid JSON from Terraform API output!"; exit 1; }
 
-          # Extract IDs safely
+          # Extract IDs safely (one per line)
           API_IDS=$(echo "$TF_API_OUTPUT" | jq -r '.[]')
           if [ -n "$API_IDS" ]; then
             echo "API_INSTANCE_IDS=$API_IDS" >> $GITHUB_ENV
@@ -88,14 +88,14 @@ jobs:
           cd infra_core
           echo "DEBUG: Terraform Worker output:"
           
-          # Capture Terraform output
-          TF_WORKER_OUTPUT=$(terraform output -json worker_instance_ids 2>/dev/null)
+          # Capture Terraform output, filter out unwanted prefixes
+          TF_WORKER_OUTPUT=$(terraform output -json worker_instance_ids 2>/dev/null | grep '^\[')
           echo "DEBUG: Raw Terraform Worker output: $TF_WORKER_OUTPUT"
 
           # Validate JSON
           echo "$TF_WORKER_OUTPUT" | jq empty || { echo "ERROR: Invalid JSON from Terraform Worker output!"; exit 1; }
 
-          # Extract IDs safely
+          # Extract IDs safely (one per line)
           WORKER_IDS=$(echo "$TF_WORKER_OUTPUT" | jq -r '.[]')
           if [ -n "$WORKER_IDS" ]; then
             echo "WORKER_IDS=$WORKER_IDS" >> $GITHUB_ENV
@@ -110,10 +110,10 @@ jobs:
       # ============================
       - name: Deploy API via SSM
         run: |
-          echo "DEBUG: Using API_INSTANCE_IDS=$API_IDS"
+          echo "DEBUG: Using API_INSTANCE_IDS=$API_INSTANCE_IDS"
           aws ssm send-command \
             --document-name "AWS-RunShellScript" \
-            --instance-ids $API_IDS \
+            --instance-ids $API_INSTANCE_IDS \
             --comment "Deploy API from GitHub Actions" \
             --parameters "commands=[
               'chmod +x /home/ubuntu/pdfconverterpro/setup_api.sh',
