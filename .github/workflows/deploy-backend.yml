@@ -61,16 +61,26 @@ jobs:
         run: |
           cd infra_core
           echo "DEBUG: Terraform API output:"
-          
-          # Capture Terraform output, filter out unwanted prefixes
-          TF_API_OUTPUT=$(terraform output -json api_instance_ids 2>/dev/null | grep '^\[')
+
+          # Capture Terraform output safely
+          TF_API_OUTPUT=$(terraform output -json api_instance_ids 2>/dev/null || true)
           echo "DEBUG: Raw Terraform API output: $TF_API_OUTPUT"
 
           # Validate JSON
-          echo "$TF_API_OUTPUT" | jq empty || { echo "ERROR: Invalid JSON from Terraform API output!"; exit 1; }
+          echo "$TF_API_OUTPUT" | jq -e . >/dev/null || { 
+            echo "ERROR: Invalid JSON from Terraform API output!"; 
+            exit 1; 
+          }
 
           # Extract IDs safely (one per line)
           API_IDS=$(echo "$TF_API_OUTPUT" | jq -r '.[]')
+
+          # Print exactly what was extracted
+          echo "DEBUG: Pruned/extracted API instance IDs:"
+          echo "$API_IDS" | while read id; do
+            echo "  -> $id"
+          done
+
           if [ -n "$API_IDS" ]; then
             echo "API_INSTANCE_IDS=$API_IDS" >> $GITHUB_ENV
             echo "DEBUG: Retrieved API instance IDs: $API_IDS"
@@ -87,16 +97,26 @@ jobs:
         run: |
           cd infra_core
           echo "DEBUG: Terraform Worker output:"
-          
-          # Capture Terraform output, filter out unwanted prefixes
-          TF_WORKER_OUTPUT=$(terraform output -json worker_instance_ids 2>/dev/null | grep '^\[')
+
+          # Capture Terraform output safely
+          TF_WORKER_OUTPUT=$(terraform output -json worker_instance_ids 2>/dev/null || true)
           echo "DEBUG: Raw Terraform Worker output: $TF_WORKER_OUTPUT"
 
           # Validate JSON
-          echo "$TF_WORKER_OUTPUT" | jq empty || { echo "ERROR: Invalid JSON from Terraform Worker output!"; exit 1; }
+          echo "$TF_WORKER_OUTPUT" | jq -e . >/dev/null || { 
+            echo "ERROR: Invalid JSON from Terraform Worker output!"; 
+            exit 1; 
+          }
 
           # Extract IDs safely (one per line)
           WORKER_IDS=$(echo "$TF_WORKER_OUTPUT" | jq -r '.[]')
+
+          # Print exactly what was extracted
+          echo "DEBUG: Pruned/extracted Worker instance IDs:"
+          echo "$WORKER_IDS" | while read id; do
+            echo "  -> $id"
+          done
+
           if [ -n "$WORKER_IDS" ]; then
             echo "WORKER_IDS=$WORKER_IDS" >> $GITHUB_ENV
             echo "DEBUG: Retrieved Worker instance IDs: $WORKER_IDS"
