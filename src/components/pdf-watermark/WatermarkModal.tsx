@@ -119,8 +119,9 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
         className="
-          fixed inset-4
-          max-w-full max-h-full
+          fixed inset-2 sm:inset-4
+          w-auto max-w-[95vw] sm:max-w-2xl
+          h-auto max-h-[95vh] sm:max-h-[90vh]
           !rounded
           flex flex-col p-4
           bg-white
@@ -339,7 +340,7 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
         </div>
 
         {/* Buttons */}
-        <div className="flex justify-end gap-1.5 mt-auto text-xs">
+        <div className="flex justify-end gap-1.5 mt-auto text-xs flex-wrap sm:flex-nowrap">
           <Button
             className="bg-white text-gray-700 border border-gray-300 hover:bg-gray-100 rounded text-xs px-2 py-1"
             onClick={() => {
