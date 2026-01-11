@@ -38,7 +38,7 @@ jobs:
         run: aws sts get-caller-identity
 
       # ============================
-      # Setup Terraform (version >= 1.6.0)
+      # Setup Terraform (>=1.6.0)
       # ============================
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -61,24 +61,9 @@ jobs:
         run: |
           cd infra_core
           echo "DEBUG: Capturing Terraform API output"
-
-          TF_API_RAW=$(terraform output -json api_instance_ids 2>/dev/null || true)
-          echo "DEBUG: Raw Terraform API output:"
-          echo "$TF_API_RAW"
-
-          TF_API_JSON=$(echo "$TF_API_RAW" | sed -n 's/^::debug::stdout: \(.*\)%0A$/\1/p')
-          TF_API_JSON=${TF_API_JSON:-$TF_API_RAW}
-
-          echo "$TF_API_JSON" | jq -e . >/dev/null || { echo "ERROR: Invalid JSON!"; exit 1; }
-
-          API_IDS=$(echo "$TF_API_JSON" | jq -r '.[]')
+          API_IDS=$(terraform output -json api_instance_ids | jq -r '.[]')
           echo "DEBUG: Extracted API IDs: $API_IDS"
-
-          if [ -n "$API_IDS" ]; then
-            echo "API_INSTANCE_IDS=$API_IDS" >> $GITHUB_ENV
-          else
-            echo "ERROR: No API instance IDs found!"; exit 1
-          fi
+          echo "API_INSTANCE_IDS=$API_IDS" >> $GITHUB_ENV
 
       # ============================
       # Get Worker Instance IDs from Terraform
@@ -88,27 +73,12 @@ jobs:
         run: |
           cd infra_core
           echo "DEBUG: Capturing Terraform Worker output"
-
-          TF_WORKER_RAW=$(terraform output -json worker_instance_ids 2>/dev/null || true)
-          echo "DEBUG: Raw Terraform Worker output:"
-          echo "$TF_WORKER_RAW"
-
-          TF_WORKER_JSON=$(echo "$TF_WORKER_RAW" | sed -n 's/^::debug::stdout: \(.*\)%0A$/\1/p')
-          TF_WORKER_JSON=${TF_WORKER_JSON:-$TF_WORKER_RAW}
-
-          echo "$TF_WORKER_JSON" | jq -e . >/dev/null || { echo "ERROR: Invalid JSON!"; exit 1; }
-
-          WORKER_IDS=$(echo "$TF_WORKER_JSON" | jq -r '.[]')
+          WORKER_IDS=$(terraform output -json worker_instance_ids | jq -r '.[]')
           echo "DEBUG: Extracted Worker IDs: $WORKER_IDS"
-
-          if [ -n "$WORKER_IDS" ]; then
-            echo "WORKER_IDS=$WORKER_IDS" >> $GITHUB_ENV
-          else
-            echo "ERROR: No Worker instance IDs found!"; exit 1
-          fi
+          echo "WORKER_IDS=$WORKER_IDS" >> $GITHUB_ENV
 
       # ============================
-      # Deploy API via SSM and poll logs
+      # Deploy API via SSM (clone/update repo + run setup)
       # ============================
       - name: Deploy API via SSM with logs
         run: |
@@ -119,8 +89,12 @@ jobs:
             --instance-ids $API_INSTANCE_IDS \
             --comment "Deploy API from GitHub Actions" \
             --parameters "commands=[
-              'chmod +x /home/ubuntu/pdfconverterpro/setup_api.sh',
-              '/home/ubuntu/pdfconverterpro/setup_api.sh'
+              'if [ ! -d /home/ubuntu/pdfconverterpro ]; then git clone https://github.com/darlingtonogbuefi/pdfconverterpro.git /home/ubuntu/pdfconverterpro; fi',
+              'cd /home/ubuntu/pdfconverterpro',
+              'git fetch origin',
+              'git reset --hard origin/main',
+              'chmod +x setup_api.sh setup_worker.sh',
+              'bash setup_api.sh'
             ]" \
             --timeout-seconds 3600 \
             --query "Command.CommandId" --output text)
@@ -146,7 +120,7 @@ jobs:
             --instance-id "$API_INSTANCE_IDS"
 
       # ============================
-      # Deploy Worker via SSM and poll logs
+      # Deploy Worker via SSM (clone/update repo + run setup)
       # ============================
       - name: Deploy Worker via SSM with logs
         run: |
@@ -157,8 +131,12 @@ jobs:
             --instance-ids $WORKER_IDS \
             --comment "Deploy Worker from GitHub Actions" \
             --parameters "commands=[
-              'chmod +x /home/ubuntu/pdfconverterpro/setup_worker.sh',
-              '/home/ubuntu/pdfconverterpro/setup_worker.sh'
+              'if [ ! -d /home/ubuntu/pdfconverterpro ]; then git clone https://github.com/darlingtonogbuefi/pdfconverterpro.git /home/ubuntu/pdfconverterpro; fi',
+              'cd /home/ubuntu/pdfconverterpro',
+              'git fetch origin',
+              'git reset --hard origin/main',
+              'chmod +x setup_api.sh setup_worker.sh',
+              'bash setup_worker.sh'
             ]" \
             --timeout-seconds 3600 \
             --query "Command.CommandId" --output text)
