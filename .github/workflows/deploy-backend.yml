@@ -61,9 +61,24 @@ jobs:
         run: |
           cd infra_core
           echo "DEBUG: Capturing Terraform API output"
-          API_IDS=$(terraform output -json api_instance_ids | jq -r '.[]')
+
+          TF_API_RAW=$(terraform output -json api_instance_ids 2>/dev/null || true)
+          echo "DEBUG: Raw Terraform API output:"
+          echo "$TF_API_RAW"
+
+          TF_API_JSON=$(echo "$TF_API_RAW" | sed -n 's/^::debug::stdout: \(.*\)%0A$/\1/p')
+          TF_API_JSON=${TF_API_JSON:-$TF_API_RAW}
+
+          echo "$TF_API_JSON" | jq -e . >/dev/null || { echo "ERROR: Invalid JSON!"; exit 1; }
+
+          API_IDS=$(echo "$TF_API_JSON" | jq -r '.[]')
           echo "DEBUG: Extracted API IDs: $API_IDS"
-          echo "API_INSTANCE_IDS=$API_IDS" >> $GITHUB_ENV
+
+          if [ -n "$API_IDS" ]; then
+            echo "API_INSTANCE_IDS=$API_IDS" >> $GITHUB_ENV
+          else
+            echo "ERROR: No API instance IDs found!"; exit 1
+          fi
 
       # ============================
       # Get Worker Instance IDs from Terraform
@@ -73,9 +88,24 @@ jobs:
         run: |
           cd infra_core
           echo "DEBUG: Capturing Terraform Worker output"
-          WORKER_IDS=$(terraform output -json worker_instance_ids | jq -r '.[]')
+
+          TF_WORKER_RAW=$(terraform output -json worker_instance_ids 2>/dev/null || true)
+          echo "DEBUG: Raw Terraform Worker output:"
+          echo "$TF_WORKER_RAW"
+
+          TF_WORKER_JSON=$(echo "$TF_WORKER_RAW" | sed -n 's/^::debug::stdout: \(.*\)%0A$/\1/p')
+          TF_WORKER_JSON=${TF_WORKER_JSON:-$TF_WORKER_RAW}
+
+          echo "$TF_WORKER_JSON" | jq -e . >/dev/null || { echo "ERROR: Invalid JSON!"; exit 1; }
+
+          WORKER_IDS=$(echo "$TF_WORKER_JSON" | jq -r '.[]')
           echo "DEBUG: Extracted Worker IDs: $WORKER_IDS"
-          echo "WORKER_IDS=$WORKER_IDS" >> $GITHUB_ENV
+
+          if [ -n "$WORKER_IDS" ]; then
+            echo "WORKER_IDS=$WORKER_IDS" >> $GITHUB_ENV
+          else
+            echo "ERROR: No Worker instance IDs found!"; exit 1
+          fi
 
       # ============================
       # Deploy API via SSM (clone/update repo + run setup)
