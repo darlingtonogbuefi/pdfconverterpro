@@ -53,26 +53,25 @@ jobs:
           terraform init -input=false
 
       # ============================
-      # Get API Instance IDs from Terraform
+      # Get API Instance IDs from Terraform (safe for lists)
       # ============================
       - name: Get API Instance IDs
         id: tf_api
         run: |
           cd infra_core
-          # Use -raw to get plain string, safe for $GITHUB_ENV
-          API_IDS=$(terraform output -raw api_instance_ids)
+          # Convert JSON list to space-separated string for $GITHUB_ENV
+          API_IDS=$(terraform output -json api_instance_ids | jq -r '.[]' | tr '\n' ' ')
           echo "API_INSTANCE_IDS=$API_IDS" >> $GITHUB_ENV
 
       # ============================
-      # Get Worker Instance IDs from Terraform
+      # Get Worker Instance IDs from Terraform (safe for lists)
       # ============================
       - name: Get Worker Instance IDs
         id: tf_worker
         run: |
           cd infra_core
-          # Use -raw to get plain string, safe for $GITHUB_ENV
-          WORKER_IDS=$(terraform output -raw worker_instance_ids)
-          echo "WORKER_INSTANCE_IDS=$WORKER_IDS" >> $GITHUB_ENV
+          WORKER_IDS=$(terraform output -json worker_instance_ids | jq -r '.[]' | tr '\n' ' ')
+          echo "WORKER_IDS=$WORKER_IDS" >> $GITHUB_ENV
 
       # ============================
       # Deploy API via SSM using setup script
@@ -96,7 +95,7 @@ jobs:
         run: |
           aws ssm send-command \
             --document-name "AWS-RunShellScript" \
-            --instance-ids $WORKER_INSTANCE_IDS \
+            --instance-ids $WORKER_IDS \
             --comment "Deploy Worker from GitHub Actions" \
             --parameters "commands=[
               'chmod +x /home/ubuntu/pdfconverterpro/setup_worker.sh',
