@@ -37,15 +37,6 @@ jobs:
         run: aws sts get-caller-identity
 
       # ============================
-      # Terraform Init & Apply (optional)
-      # ============================
-      - name: Terraform Init & Apply
-        run: |
-          cd infra_core
-          terraform init
-          terraform apply -auto-approve
-
-      # ============================
       # Get API Instance IDs from Terraform
       # ============================
       - name: Get API Instance IDs
