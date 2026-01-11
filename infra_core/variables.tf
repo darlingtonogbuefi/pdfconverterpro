@@ -125,3 +125,9 @@ variable "files_bucket_name" {
   type        = string
   default     = "pdfconvertpro-files-prod"
 }
+
+variable "cloudfront_aliases" {
+  description = "Custom domain names (CNAMEs) for the CloudFront distribution"
+  type        = list(string)
+  default     = ["pdfconvertpro.cribr.co.uk"]
+}

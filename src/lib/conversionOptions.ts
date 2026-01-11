@@ -40,7 +40,7 @@ export const conversionOptions: ConversionOption[] = [
   },
   {
     id: 'pdf-to-powerpoint',
-    label: 'PDF to PowerPoint',
+    label: 'PDF to PPT',
     description: 'Convert PDF documents into editable PowerPoint slides.',
     inputFormats: ['PDF'],
     outputFormat: 'PowerPoint',

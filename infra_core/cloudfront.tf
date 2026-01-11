@@ -1,4 +1,4 @@
-# infra_core\cloudfront.tf
+# infra_core/cloudfront.tf
 
 # ============================
 # CloudFront OAI for Frontend
@@ -13,6 +13,9 @@ resource "aws_cloudfront_origin_access_identity" "frontend_oai" {
 resource "aws_cloudfront_distribution" "frontend" {
   enabled = true
   comment = "CloudFront distribution for frontend S3 bucket"
+
+  # ✅ Custom domain(s) for CloudFront
+  aliases = var.cloudfront_aliases
 
   depends_on = [
     aws_s3_bucket.frontend,
@@ -46,7 +49,7 @@ resource "aws_cloudfront_distribution" "frontend" {
       http_port              = 80
       https_port             = 443
       origin_protocol_policy = "http-only"
-      origin_ssl_protocols   = ["TLSv1.2"]  # <-- required by Terraform
+      origin_ssl_protocols   = ["TLSv1.2"]
     }
   }
 
@@ -123,9 +126,6 @@ resource "aws_cloudfront_distribution" "frontend" {
   # ============================
   # Viewer Certificate
   # ============================
-  # RECOMMENDED:
-  # Replace default certificate with ACM cert for:
-  # pdfconvertpro.cribr.co.uk (must be in us-east-1)
   viewer_certificate {
     acm_certificate_arn      = var.certificate_arn
     ssl_support_method       = "sni-only"
