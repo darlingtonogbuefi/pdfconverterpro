@@ -1,5 +1,6 @@
 #!/bin/bash
 # setup_worker.sh
+
 set -euo pipefail
 
 APP_USER="ubuntu"
@@ -44,11 +45,49 @@ echo "AWS_REGION=$AWS_REGION"
 # -----------------------------------
 # System packages
 # -----------------------------------
-log_step "Installing system packages"
-if apt-get update && apt-get install -y python3 python3-venv python3-pip git snapd libgl1 libglib2.0-0 tesseract-ocr; then
+log_step "Installing system packages (Python, OCR, PDF tools)"
+if apt-get update && apt-get install -y \
+    python3 \
+    python3-venv \
+    python3-pip \
+    git \
+    snapd \
+    libgl1 \
+    libglib2.0-0 \
+    tesseract-ocr \
+    poppler-utils \
+    ghostscript
+then
     log_success "System packages installed"
 else
     log_error "Failed to install system packages"
+    exit 1
+fi
+
+# -----------------------------------
+# Verify OCR / PDF tools
+# -----------------------------------
+log_step "Verifying OCR and PDF tooling availability"
+
+if tesseract --version >/dev/null 2>&1; then
+    log_success "Tesseract OCR is available"
+else
+    log_error "Tesseract OCR is NOT available"
+    exit 1
+fi
+
+if pdftoppm -h >/dev/null 2>&1; then
+    log_success "Poppler (pdftoppm) is available"
+else
+    log_error "Poppler is NOT available"
+    exit 1
+fi
+
+if gs --version >/dev/null 2>&1; then
+    log_success "Ghostscript is available"
+else
+    log_error "Ghostscript is NOT available"
+    exit 1
 fi
 
 # -----------------------------------
@@ -62,6 +101,7 @@ if [ ! -d "$APP_DIR" ]; then
         log_success "Repository cloned"
     else
         log_error "Failed to clone repository"
+        exit 1
     fi
 else
     echo "Updating repository..."
@@ -70,6 +110,7 @@ else
         log_success "Repository updated"
     else
         log_error "Failed to update repository"
+        exit 1
     fi
 fi
 
@@ -84,6 +125,7 @@ if [ ! -d "$VENV_DIR" ]; then
         log_success "Virtual environment created"
     else
         log_error "Failed to create virtual environment"
+        exit 1
     fi
 fi
 
@@ -93,6 +135,8 @@ if pip install --upgrade pip && pip install -r requirements.txt; then
     log_success "Python dependencies installed"
 else
     log_error "Failed to install Python dependencies"
+    deactivate
+    exit 1
 fi
 
 deactivate
@@ -110,6 +154,7 @@ then
     log_success "Environment file created at $ENV_FILE"
 else
     log_error "Failed to create environment file"
+    exit 1
 fi
 
 # -----------------------------------
@@ -142,6 +187,7 @@ then
     log_success "Systemd service file created at $SERVICE_FILE"
 else
     log_error "Failed to create systemd service file"
+    exit 1
 fi
 
 # -----------------------------------
@@ -152,9 +198,9 @@ if systemctl daemon-reload && systemctl enable "$SERVICE_NAME" && systemctl rest
     log_success "Service $SERVICE_NAME enabled and started"
 else
     log_error "Failed to enable/start service $SERVICE_NAME"
+    exit 1
 fi
 
-# Show service status
 systemctl status "$SERVICE_NAME" --no-pager || echo "⚠️ Could not retrieve service status"
 
 # -----------------------------------
@@ -178,7 +224,9 @@ if ! snap services | grep -q amazon-ssm-agent; then
     fi
 fi
 
-if systemctl enable snap.amazon-ssm-agent.amazon-ssm-agent.service && systemctl restart snap.amazon-ssm-agent.amazon-ssm-agent.service; then
+if systemctl enable snap.amazon-ssm-agent.amazon-ssm-agent.service && \
+   systemctl restart snap.amazon-ssm-agent.amazon-ssm-agent.service
+then
     log_success "SSM Agent service enabled and restarted"
 else
     log_error "Failed to start SSM Agent service"
