@@ -63,8 +63,12 @@ jobs:
           echo "DEBUG: Terraform API output:"
 
           # Capture Terraform output safely
-          TF_API_OUTPUT=$(terraform output -json api_instance_ids 2>/dev/null || true)
-          echo "DEBUG: Raw Terraform API output: $TF_API_OUTPUT"
+          TF_API_OUTPUT=$(terraform output -json api_instance_ids 2>/dev/null)
+
+          # Prune any non-JSON lines injected by GitHub Actions
+          TF_API_OUTPUT=$(echo "$TF_API_OUTPUT" | sed -n '/^\[/,$p')
+
+          echo "DEBUG: Raw Terraform API output after pruning: $TF_API_OUTPUT"
 
           # Validate JSON
           echo "$TF_API_OUTPUT" | jq -e . >/dev/null || { 
@@ -99,8 +103,12 @@ jobs:
           echo "DEBUG: Terraform Worker output:"
 
           # Capture Terraform output safely
-          TF_WORKER_OUTPUT=$(terraform output -json worker_instance_ids 2>/dev/null || true)
-          echo "DEBUG: Raw Terraform Worker output: $TF_WORKER_OUTPUT"
+          TF_WORKER_OUTPUT=$(terraform output -json worker_instance_ids 2>/dev/null)
+
+          # Prune any non-JSON lines injected by GitHub Actions
+          TF_WORKER_OUTPUT=$(echo "$TF_WORKER_OUTPUT" | sed -n '/^\[/,$p')
+
+          echo "DEBUG: Raw Terraform Worker output after pruning: $TF_WORKER_OUTPUT"
 
           # Validate JSON
           echo "$TF_WORKER_OUTPUT" | jq -e . >/dev/null || { 
