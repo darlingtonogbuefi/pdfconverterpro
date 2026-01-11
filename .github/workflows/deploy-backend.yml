@@ -1,4 +1,4 @@
-# .github/workflows/deploy-backend.yml 
+# .github/workflows/deploy-backend.yml
 
 name: Deploy Backend & Worker to EC2 (SSM + OIDC)
 
@@ -54,7 +54,7 @@ jobs:
           terraform init -input=false
 
       # ============================
-      # Get API Instance IDs from Terraform (safe for lists)
+      # Get API Instance IDs from Terraform
       # ============================
       - name: Get API Instance IDs
         id: tf_api
@@ -62,32 +62,35 @@ jobs:
           cd infra_core
           echo "DEBUG: Capturing Terraform API output"
 
-          # Capture Terraform output safely
-          TF_API_OUTPUT=$(terraform output -json api_instance_ids 2>/dev/null || true)
+          # Capture raw Terraform output (may include GitHub debug prefixes)
+          TF_API_RAW=$(terraform output -json api_instance_ids 2>/dev/null || true)
 
           # Show raw output before pruning
           echo "DEBUG: Raw Terraform API output (before pruning):"
-          echo "$TF_API_OUTPUT" | while read line; do
+          echo "$TF_API_RAW" | while read line; do
             echo "  (raw) $line"
           done
 
-          # Prune any non-JSON lines (keep lines starting with [ or {)
-          TF_API_OUTPUT_PRUNED=$(echo "$TF_API_OUTPUT" | grep '^[\[{]')
+          # Extract only JSON from ::debug::stdout: line if present, otherwise keep original
+          TF_API_JSON=$(echo "$TF_API_RAW" | sed -n 's/^::debug::stdout: \(.*\)%0A$/\1/p')
+          if [ -z "$TF_API_JSON" ]; then
+            TF_API_JSON="$TF_API_RAW"
+          fi
 
           # Show output after pruning
-          echo "DEBUG: Terraform API output after pruning non-JSON lines:"
-          echo "$TF_API_OUTPUT_PRUNED" | while read line; do
+          echo "DEBUG: Terraform API output after pruning non-JSON lines / extracting JSON:"
+          echo "$TF_API_JSON" | while read line; do
             echo "  (pruned) $line"
           done
 
           # Validate JSON
-          echo "$TF_API_OUTPUT_PRUNED" | jq -e . >/dev/null || { 
+          echo "$TF_API_JSON" | jq -e . >/dev/null || { 
             echo "ERROR: Invalid JSON from Terraform API output after pruning!"; 
             exit 1; 
           }
 
           # Extract IDs safely (one per line)
-          API_IDS=$(echo "$TF_API_OUTPUT_PRUNED" | jq -r '.[]')
+          API_IDS=$(echo "$TF_API_JSON" | jq -r '.[]')
 
           # Print extracted IDs
           echo "DEBUG: Extracted API instance IDs:"
@@ -105,7 +108,7 @@ jobs:
           fi
 
       # ============================
-      # Get Worker Instance IDs from Terraform (safe for lists)
+      # Get Worker Instance IDs from Terraform
       # ============================
       - name: Get Worker Instance IDs
         id: tf_worker
@@ -113,32 +116,34 @@ jobs:
           cd infra_core
           echo "DEBUG: Capturing Terraform Worker output"
 
-          # Capture Terraform output safely
-          TF_WORKER_OUTPUT=$(terraform output -json worker_instance_ids 2>/dev/null || true)
+          TF_WORKER_RAW=$(terraform output -json worker_instance_ids 2>/dev/null || true)
 
           # Show raw output before pruning
           echo "DEBUG: Raw Terraform Worker output (before pruning):"
-          echo "$TF_WORKER_OUTPUT" | while read line; do
+          echo "$TF_WORKER_RAW" | while read line; do
             echo "  (raw) $line"
           done
 
-          # Prune any non-JSON lines (keep lines starting with [ or {)
-          TF_WORKER_OUTPUT_PRUNED=$(echo "$TF_WORKER_OUTPUT" | grep '^[\[{]')
+          # Extract only JSON from ::debug::stdout: line if present
+          TF_WORKER_JSON=$(echo "$TF_WORKER_RAW" | sed -n 's/^::debug::stdout: \(.*\)%0A$/\1/p')
+          if [ -z "$TF_WORKER_JSON" ]; then
+            TF_WORKER_JSON="$TF_WORKER_RAW"
+          fi
 
           # Show output after pruning
-          echo "DEBUG: Terraform Worker output after pruning non-JSON lines:"
-          echo "$TF_WORKER_OUTPUT_PRUNED" | while read line; do
+          echo "DEBUG: Terraform Worker output after pruning non-JSON lines / extracting JSON:"
+          echo "$TF_WORKER_JSON" | while read line; do
             echo "  (pruned) $line"
           done
 
           # Validate JSON
-          echo "$TF_WORKER_OUTPUT_PRUNED" | jq -e . >/dev/null || { 
+          echo "$TF_WORKER_JSON" | jq -e . >/dev/null || { 
             echo "ERROR: Invalid JSON from Terraform Worker output after pruning!"; 
             exit 1; 
           }
 
           # Extract IDs safely (one per line)
-          WORKER_IDS=$(echo "$TF_WORKER_OUTPUT_PRUNED" | jq -r '.[]')
+          WORKER_IDS=$(echo "$TF_WORKER_JSON" | jq -r '.[]')
 
           # Print extracted IDs
           echo "DEBUG: Extracted Worker instance IDs:"
