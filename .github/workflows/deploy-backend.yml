@@ -45,13 +45,21 @@ jobs:
           terraform_version: 1.7.0
 
       # ============================
+      # Terraform Init (required for outputs)
+      # ============================
+      - name: Terraform Init
+        run: |
+          cd infra_core
+          terraform init -input=false
+
+      # ============================
       # Get API Instance IDs from Terraform
       # ============================
       - name: Get API Instance IDs
         id: tf_api
         run: |
           cd infra_core
-          API_IDS=$(terraform output -json api_instance_ids | jq -r '.[]')
+          API_IDS=$(terraform output api_instance_ids)  # no -json, no jq
           echo "API_INSTANCE_IDS=$API_IDS" >> $GITHUB_ENV
 
       # ============================
@@ -61,7 +69,7 @@ jobs:
         id: tf_worker
         run: |
           cd infra_core
-          WORKER_IDS=$(terraform output -json worker_instance_ids | jq -r '.[]')
+          WORKER_IDS=$(terraform output worker_instance_ids)  # no -json, no jq
           echo "WORKER_INSTANCE_IDS=$WORKER_IDS" >> $GITHUB_ENV
 
       # ============================
