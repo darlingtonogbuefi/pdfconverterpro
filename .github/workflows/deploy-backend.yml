@@ -119,9 +119,10 @@ jobs:
             --instance-ids $API_INSTANCE_IDS \
             --comment "Deploy API from GitHub Actions" \
             --parameters "commands=[
+              'export HOME=/home/ubuntu',
               'if [ ! -d /home/ubuntu/pdfconverterpro ]; then git clone https://github.com/darlingtonogbuefi/pdfconverterpro.git /home/ubuntu/pdfconverterpro; fi',
               'cd /home/ubuntu/pdfconverterpro',
-              'git config --global --add safe.directory /home/ubuntu/pdfconverterpro',
+              'git config --global --add safe.directory /home/ubuntu/pdfconverterpro || git config --system --add safe.directory /home/ubuntu/pdfconverterpro',
               'git fetch origin',
               'git reset --hard origin/main',
               'if [ -f setup_api.sh ]; then chmod +x setup_api.sh; bash setup_api.sh; fi'
@@ -161,9 +162,10 @@ jobs:
             --instance-ids $WORKER_IDS \
             --comment "Deploy Worker from GitHub Actions" \
             --parameters "commands=[
+              'export HOME=/home/ubuntu',
               'if [ ! -d /home/ubuntu/pdfconverterpro ]; then git clone https://github.com/darlingtonogbuefi/pdfconverterpro.git /home/ubuntu/pdfconverterpro; fi',
               'cd /home/ubuntu/pdfconverterpro',
-              'git config --global --add safe.directory /home/ubuntu/pdfconverterpro',
+              'git config --global --add safe.directory /home/ubuntu/pdfconverterpro || git config --system --add safe.directory /home/ubuntu/pdfconverterpro',
               'git fetch origin',
               'git reset --hard origin/main',
               'if [ -f setup_worker.sh ]; then chmod +x setup_worker.sh; bash setup_worker.sh; fi'
