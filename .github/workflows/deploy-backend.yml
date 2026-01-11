@@ -60,31 +60,42 @@ jobs:
         id: tf_api
         run: |
           cd infra_core
-          echo "DEBUG: Terraform API output:"
+          echo "DEBUG: Capturing Terraform API output"
 
           # Capture Terraform output safely
-          TF_API_OUTPUT=$(terraform output -json api_instance_ids 2>/dev/null)
+          TF_API_OUTPUT=$(terraform output -json api_instance_ids 2>/dev/null || true)
 
-          # Prune any non-JSON lines injected by GitHub Actions
-          TF_API_OUTPUT=$(echo "$TF_API_OUTPUT" | sed -n '/^\[/,$p')
+          # Show raw output before pruning
+          echo "DEBUG: Raw Terraform API output (before pruning):"
+          echo "$TF_API_OUTPUT" | while read line; do
+            echo "  (raw) $line"
+          done
 
-          echo "DEBUG: Raw Terraform API output after pruning: $TF_API_OUTPUT"
+          # Prune any non-JSON lines (keep lines starting with [ or {)
+          TF_API_OUTPUT_PRUNED=$(echo "$TF_API_OUTPUT" | grep '^[\[{]')
+
+          # Show output after pruning
+          echo "DEBUG: Terraform API output after pruning non-JSON lines:"
+          echo "$TF_API_OUTPUT_PRUNED" | while read line; do
+            echo "  (pruned) $line"
+          done
 
           # Validate JSON
-          echo "$TF_API_OUTPUT" | jq -e . >/dev/null || { 
-            echo "ERROR: Invalid JSON from Terraform API output!"; 
+          echo "$TF_API_OUTPUT_PRUNED" | jq -e . >/dev/null || { 
+            echo "ERROR: Invalid JSON from Terraform API output after pruning!"; 
             exit 1; 
           }
 
           # Extract IDs safely (one per line)
-          API_IDS=$(echo "$TF_API_OUTPUT" | jq -r '.[]')
+          API_IDS=$(echo "$TF_API_OUTPUT_PRUNED" | jq -r '.[]')
 
-          # Print exactly what was extracted
-          echo "DEBUG: Pruned/extracted API instance IDs:"
+          # Print extracted IDs
+          echo "DEBUG: Extracted API instance IDs:"
           echo "$API_IDS" | while read id; do
             echo "  -> $id"
           done
 
+          # Save to GitHub environment
           if [ -n "$API_IDS" ]; then
             echo "API_INSTANCE_IDS=$API_IDS" >> $GITHUB_ENV
             echo "DEBUG: Retrieved API instance IDs: $API_IDS"
@@ -100,31 +111,42 @@ jobs:
         id: tf_worker
         run: |
           cd infra_core
-          echo "DEBUG: Terraform Worker output:"
+          echo "DEBUG: Capturing Terraform Worker output"
 
           # Capture Terraform output safely
-          TF_WORKER_OUTPUT=$(terraform output -json worker_instance_ids 2>/dev/null)
+          TF_WORKER_OUTPUT=$(terraform output -json worker_instance_ids 2>/dev/null || true)
 
-          # Prune any non-JSON lines injected by GitHub Actions
-          TF_WORKER_OUTPUT=$(echo "$TF_WORKER_OUTPUT" | sed -n '/^\[/,$p')
+          # Show raw output before pruning
+          echo "DEBUG: Raw Terraform Worker output (before pruning):"
+          echo "$TF_WORKER_OUTPUT" | while read line; do
+            echo "  (raw) $line"
+          done
 
-          echo "DEBUG: Raw Terraform Worker output after pruning: $TF_WORKER_OUTPUT"
+          # Prune any non-JSON lines (keep lines starting with [ or {)
+          TF_WORKER_OUTPUT_PRUNED=$(echo "$TF_WORKER_OUTPUT" | grep '^[\[{]')
+
+          # Show output after pruning
+          echo "DEBUG: Terraform Worker output after pruning non-JSON lines:"
+          echo "$TF_WORKER_OUTPUT_PRUNED" | while read line; do
+            echo "  (pruned) $line"
+          done
 
           # Validate JSON
-          echo "$TF_WORKER_OUTPUT" | jq -e . >/dev/null || { 
-            echo "ERROR: Invalid JSON from Terraform Worker output!"; 
+          echo "$TF_WORKER_OUTPUT_PRUNED" | jq -e . >/dev/null || { 
+            echo "ERROR: Invalid JSON from Terraform Worker output after pruning!"; 
             exit 1; 
           }
 
           # Extract IDs safely (one per line)
-          WORKER_IDS=$(echo "$TF_WORKER_OUTPUT" | jq -r '.[]')
+          WORKER_IDS=$(echo "$TF_WORKER_OUTPUT_PRUNED" | jq -r '.[]')
 
-          # Print exactly what was extracted
-          echo "DEBUG: Pruned/extracted Worker instance IDs:"
+          # Print extracted IDs
+          echo "DEBUG: Extracted Worker instance IDs:"
           echo "$WORKER_IDS" | while read id; do
             echo "  -> $id"
           done
 
+          # Save to GitHub environment
           if [ -n "$WORKER_IDS" ]; then
             echo "WORKER_IDS=$WORKER_IDS" >> $GITHUB_ENV
             echo "DEBUG: Retrieved Worker instance IDs: $WORKER_IDS"
