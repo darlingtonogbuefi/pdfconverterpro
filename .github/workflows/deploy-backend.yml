@@ -62,49 +62,22 @@ jobs:
           cd infra_core
           echo "DEBUG: Capturing Terraform API output"
 
-          # Capture raw Terraform output (may include GitHub debug prefixes)
           TF_API_RAW=$(terraform output -json api_instance_ids 2>/dev/null || true)
+          echo "DEBUG: Raw Terraform API output:"
+          echo "$TF_API_RAW"
 
-          # Show raw output before pruning
-          echo "DEBUG: Raw Terraform API output (before pruning):"
-          echo "$TF_API_RAW" | while read line; do
-            echo "  (raw) $line"
-          done
-
-          # Extract only JSON from ::debug::stdout: line if present, otherwise keep original
           TF_API_JSON=$(echo "$TF_API_RAW" | sed -n 's/^::debug::stdout: \(.*\)%0A$/\1/p')
-          if [ -z "$TF_API_JSON" ]; then
-            TF_API_JSON="$TF_API_RAW"
-          fi
+          TF_API_JSON=${TF_API_JSON:-$TF_API_RAW}
 
-          # Show output after pruning
-          echo "DEBUG: Terraform API output after pruning non-JSON lines / extracting JSON:"
-          echo "$TF_API_JSON" | while read line; do
-            echo "  (pruned) $line"
-          done
+          echo "$TF_API_JSON" | jq -e . >/dev/null || { echo "ERROR: Invalid JSON!"; exit 1; }
 
-          # Validate JSON
-          echo "$TF_API_JSON" | jq -e . >/dev/null || { 
-            echo "ERROR: Invalid JSON from Terraform API output after pruning!"; 
-            exit 1; 
-          }
-
-          # Extract IDs safely (one per line)
           API_IDS=$(echo "$TF_API_JSON" | jq -r '.[]')
+          echo "DEBUG: Extracted API IDs: $API_IDS"
 
-          # Print extracted IDs
-          echo "DEBUG: Extracted API instance IDs:"
-          echo "$API_IDS" | while read id; do
-            echo "  -> $id"
-          done
-
-          # Save to GitHub environment
           if [ -n "$API_IDS" ]; then
             echo "API_INSTANCE_IDS=$API_IDS" >> $GITHUB_ENV
-            echo "DEBUG: Retrieved API instance IDs: $API_IDS"
           else
-            echo "ERROR: No API instance IDs found in Terraform output!"
-            exit 1
+            echo "ERROR: No API instance IDs found!"; exit 1
           fi
 
       # ============================
@@ -117,56 +90,31 @@ jobs:
           echo "DEBUG: Capturing Terraform Worker output"
 
           TF_WORKER_RAW=$(terraform output -json worker_instance_ids 2>/dev/null || true)
+          echo "DEBUG: Raw Terraform Worker output:"
+          echo "$TF_WORKER_RAW"
 
-          # Show raw output before pruning
-          echo "DEBUG: Raw Terraform Worker output (before pruning):"
-          echo "$TF_WORKER_RAW" | while read line; do
-            echo "  (raw) $line"
-          done
-
-          # Extract only JSON from ::debug::stdout: line if present
           TF_WORKER_JSON=$(echo "$TF_WORKER_RAW" | sed -n 's/^::debug::stdout: \(.*\)%0A$/\1/p')
-          if [ -z "$TF_WORKER_JSON" ]; then
-            TF_WORKER_JSON="$TF_WORKER_RAW"
-          fi
+          TF_WORKER_JSON=${TF_WORKER_JSON:-$TF_WORKER_RAW}
 
-          # Show output after pruning
-          echo "DEBUG: Terraform Worker output after pruning non-JSON lines / extracting JSON:"
-          echo "$TF_WORKER_JSON" | while read line; do
-            echo "  (pruned) $line"
-          done
+          echo "$TF_WORKER_JSON" | jq -e . >/dev/null || { echo "ERROR: Invalid JSON!"; exit 1; }
 
-          # Validate JSON
-          echo "$TF_WORKER_JSON" | jq -e . >/dev/null || { 
-            echo "ERROR: Invalid JSON from Terraform Worker output after pruning!"; 
-            exit 1; 
-          }
-
-          # Extract IDs safely (one per line)
           WORKER_IDS=$(echo "$TF_WORKER_JSON" | jq -r '.[]')
+          echo "DEBUG: Extracted Worker IDs: $WORKER_IDS"
 
-          # Print extracted IDs
-          echo "DEBUG: Extracted Worker instance IDs:"
-          echo "$WORKER_IDS" | while read id; do
-            echo "  -> $id"
-          done
-
-          # Save to GitHub environment
           if [ -n "$WORKER_IDS" ]; then
             echo "WORKER_IDS=$WORKER_IDS" >> $GITHUB_ENV
-            echo "DEBUG: Retrieved Worker instance IDs: $WORKER_IDS"
           else
-            echo "ERROR: No Worker instance IDs found in Terraform output!"
-            exit 1
+            echo "ERROR: No Worker instance IDs found!"; exit 1
           fi
 
       # ============================
-      # Deploy API via SSM using setup script
+      # Deploy API via SSM and poll logs
       # ============================
-      - name: Deploy API via SSM
+      - name: Deploy API via SSM with logs
         run: |
-          echo "DEBUG: Using API_INSTANCE_IDS=$API_INSTANCE_IDS"
-          aws ssm send-command \
+          echo "DEBUG: Deploying API to $API_INSTANCE_IDS"
+
+          COMMAND_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
             --instance-ids $API_INSTANCE_IDS \
             --comment "Deploy API from GitHub Actions" \
@@ -174,15 +122,37 @@ jobs:
               'chmod +x /home/ubuntu/pdfconverterpro/setup_api.sh',
               '/home/ubuntu/pdfconverterpro/setup_api.sh'
             ]" \
-            --timeout-seconds 3600
+            --timeout-seconds 3600 \
+            --query "Command.CommandId" --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+
+          # Poll for completion
+          while true; do
+            STATUS=$(aws ssm list-command-invocations \
+              --command-id "$COMMAND_ID" \
+              --details \
+              --query "CommandInvocations[0].Status" --output text)
+            echo "Current status: $STATUS"
+            if [[ "$STATUS" == "Success" || "$STATUS" == "Failed" || "$STATUS" == "Cancelled" ]]; then
+              break
+            fi
+            sleep 5
+          done
+
+          # Fetch stdout/stderr
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$API_INSTANCE_IDS"
 
       # ============================
-      # Deploy Worker via SSM using setup script
+      # Deploy Worker via SSM and poll logs
       # ============================
-      - name: Deploy Worker via SSM
+      - name: Deploy Worker via SSM with logs
         run: |
-          echo "DEBUG: Using WORKER_IDS=$WORKER_IDS"
-          aws ssm send-command \
+          echo "DEBUG: Deploying Worker to $WORKER_IDS"
+
+          COMMAND_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
             --instance-ids $WORKER_IDS \
             --comment "Deploy Worker from GitHub Actions" \
@@ -190,4 +160,25 @@ jobs:
               'chmod +x /home/ubuntu/pdfconverterpro/setup_worker.sh',
               '/home/ubuntu/pdfconverterpro/setup_worker.sh'
             ]" \
-            --timeout-seconds 3600
+            --timeout-seconds 3600 \
+            --query "Command.CommandId" --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+
+          # Poll for completion
+          while true; do
+            STATUS=$(aws ssm list-command-invocations \
+              --command-id "$COMMAND_ID" \
+              --details \
+              --query "CommandInvocations[0].Status" --output text)
+            echo "Current status: $STATUS"
+            if [[ "$STATUS" == "Success" || "$STATUS" == "Failed" || "$STATUS" == "Cancelled" ]]; then
+              break
+            fi
+            sleep 5
+          done
+
+          # Fetch stdout/stderr
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$WORKER_IDS"
