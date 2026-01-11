@@ -61,10 +61,16 @@ jobs:
         run: |
           cd infra_core
           echo "DEBUG: Terraform API output:"
-          terraform output -json api_instance_ids
+          
+          # Capture Terraform output
+          TF_API_OUTPUT=$(terraform output -json api_instance_ids 2>/dev/null)
+          echo "DEBUG: Raw Terraform API output: $TF_API_OUTPUT"
 
-          # Read JSON safely (CI-safe)
-          API_IDS=$(terraform output -json api_instance_ids | jq -r '.[]')
+          # Validate JSON
+          echo "$TF_API_OUTPUT" | jq empty || { echo "ERROR: Invalid JSON from Terraform API output!"; exit 1; }
+
+          # Extract IDs safely
+          API_IDS=$(echo "$TF_API_OUTPUT" | jq -r '.[]')
           if [ -n "$API_IDS" ]; then
             echo "API_INSTANCE_IDS=$API_IDS" >> $GITHUB_ENV
             echo "DEBUG: Retrieved API instance IDs: $API_IDS"
@@ -81,10 +87,16 @@ jobs:
         run: |
           cd infra_core
           echo "DEBUG: Terraform Worker output:"
-          terraform output -json worker_instance_ids
+          
+          # Capture Terraform output
+          TF_WORKER_OUTPUT=$(terraform output -json worker_instance_ids 2>/dev/null)
+          echo "DEBUG: Raw Terraform Worker output: $TF_WORKER_OUTPUT"
 
-          # Read JSON safely (CI-safe)
-          WORKER_IDS=$(terraform output -json worker_instance_ids | jq -r '.[]')
+          # Validate JSON
+          echo "$TF_WORKER_OUTPUT" | jq empty || { echo "ERROR: Invalid JSON from Terraform Worker output!"; exit 1; }
+
+          # Extract IDs safely
+          WORKER_IDS=$(echo "$TF_WORKER_OUTPUT" | jq -r '.[]')
           if [ -n "$WORKER_IDS" ]; then
             echo "WORKER_IDS=$WORKER_IDS" >> $GITHUB_ENV
             echo "DEBUG: Retrieved Worker instance IDs: $WORKER_IDS"
