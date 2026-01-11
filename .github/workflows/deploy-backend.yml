@@ -59,7 +59,8 @@ jobs:
         id: tf_api
         run: |
           cd infra_core
-          API_IDS=$(terraform output api_instance_ids)  # no -json, no jq
+          # Use -raw to get plain string, safe for $GITHUB_ENV
+          API_IDS=$(terraform output -raw api_instance_ids)
           echo "API_INSTANCE_IDS=$API_IDS" >> $GITHUB_ENV
 
       # ============================
@@ -69,7 +70,8 @@ jobs:
         id: tf_worker
         run: |
           cd infra_core
-          WORKER_IDS=$(terraform output worker_instance_ids)  # no -json, no jq
+          # Use -raw to get plain string, safe for $GITHUB_ENV
+          WORKER_IDS=$(terraform output -raw worker_instance_ids)
           echo "WORKER_INSTANCE_IDS=$WORKER_IDS" >> $GITHUB_ENV
 
       # ============================
