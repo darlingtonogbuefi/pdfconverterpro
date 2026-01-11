@@ -46,7 +46,7 @@ jobs:
           terraform_version: 1.7.0
 
       # ============================
-      # Terraform Init (required for outputs)
+      # Terraform Init (remote backend)
       # ============================
       - name: Terraform Init
         run: |

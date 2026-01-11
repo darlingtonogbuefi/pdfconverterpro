@@ -9,11 +9,11 @@ resource "aws_iam_role" "ec2_role" {
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
+    Statement = [ {
       Effect    = "Allow"
       Principal = { Service = "ec2.amazonaws.com" }
       Action    = "sts:AssumeRole"
-    }]
+    } ]
   })
 }
 
@@ -72,7 +72,7 @@ resource "aws_iam_role" "github_actions" {
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
+    Statement = [ {
       Effect = "Allow"
       Principal = {
         Federated = aws_iam_openid_connect_provider.github.arn
@@ -83,11 +83,10 @@ resource "aws_iam_role" "github_actions" {
           "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
         }
         StringLike = {
-          # Using Terraform variable for repo/branch
           "token.actions.githubusercontent.com:sub" = var.github_oidc_repo
         }
       }
-    }]
+    } ]
   })
 }
 
@@ -97,6 +96,7 @@ resource "aws_iam_role_policy" "github_actions_policy" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+      # Existing SSM permissions
       {
         Effect = "Allow"
         Action = [
@@ -105,6 +105,7 @@ resource "aws_iam_role_policy" "github_actions_policy" {
         ]
         Resource = "*"
       },
+      # Existing frontend S3 permissions
       {
         Effect = "Allow"
         Action = [
@@ -116,6 +117,31 @@ resource "aws_iam_role_policy" "github_actions_policy" {
           "arn:aws:s3:::${var.frontend_bucket_name}",
           "arn:aws:s3:::${var.frontend_bucket_name}/*"
         ]
+      },
+      # Terraform remote state: S3 access
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:ListBucket",
+          "s3:DeleteObject"
+        ]
+        Resource = [
+          "arn:aws:s3:::pdfconverterpro-terraform-state",
+          "arn:aws:s3:::pdfconverterpro-terraform-state/*"
+        ]
+      },
+      # Terraform remote state: DynamoDB locking
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:DescribeTable"
+        ]
+        Resource = "arn:aws:dynamodb:us-east-1:*:table/terraform-state-lock"
       }
     ]
   })
