@@ -1,4 +1,4 @@
-# .github/workflows/deploy-backend.yml
+# .github/workflows/deploy-backend.yml 
 
 name: Deploy Backend & Worker to EC2 (SSM + OIDC)
 
@@ -111,8 +111,10 @@ jobs:
       # Deploy API via SSM (clone/update repo + run setup)
       # ============================
       - name: Deploy API via SSM with logs
+        env:
+          FILES_BUCKET: ${{ secrets.JOBS__FILES_S3_BUCKET }}
         run: |
-          echo "DEBUG: Deploying API to $API_INSTANCE_IDS"
+          echo "DEBUG: Deploying API to $API_INSTANCE_IDS with bucket $FILES_BUCKET"
 
           COMMAND_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
@@ -120,6 +122,7 @@ jobs:
             --comment "Deploy API from GitHub Actions" \
             --parameters "commands=[
               'export HOME=/home/ubuntu',
+              'export FILES_BUCKET=$FILES_BUCKET',
               'if [ ! -d /home/ubuntu/pdfconverterpro ]; then git clone https://github.com/darlingtonogbuefi/pdfconverterpro.git /home/ubuntu/pdfconverterpro; fi',
               'cd /home/ubuntu/pdfconverterpro',
               'git config --global --add safe.directory /home/ubuntu/pdfconverterpro || git config --system --add safe.directory /home/ubuntu/pdfconverterpro',
@@ -154,8 +157,10 @@ jobs:
       # Deploy Worker via SSM (clone/update repo + run setup)
       # ============================
       - name: Deploy Worker via SSM with logs
+        env:
+          FILES_BUCKET: ${{ secrets.JOBS__FILES_S3_BUCKET }}
         run: |
-          echo "DEBUG: Deploying Worker to $WORKER_IDS"
+          echo "DEBUG: Deploying Worker to $WORKER_IDS with bucket $FILES_BUCKET"
 
           COMMAND_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
@@ -163,6 +168,7 @@ jobs:
             --comment "Deploy Worker from GitHub Actions" \
             --parameters "commands=[
               'export HOME=/home/ubuntu',
+              'export FILES_BUCKET=$FILES_BUCKET',
               'if [ ! -d /home/ubuntu/pdfconverterpro ]; then git clone https://github.com/darlingtonogbuefi/pdfconverterpro.git /home/ubuntu/pdfconverterpro; fi',
               'cd /home/ubuntu/pdfconverterpro',
               'git config --global --add safe.directory /home/ubuntu/pdfconverterpro || git config --system --add safe.directory /home/ubuntu/pdfconverterpro',
