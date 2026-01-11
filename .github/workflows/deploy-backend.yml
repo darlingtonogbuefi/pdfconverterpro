@@ -1,7 +1,5 @@
 # .github/workflows/deploy-backend.yml
 
-
-
 name: Deploy Backend & Worker to EC2 (SSM + OIDC)
 
 on:
@@ -62,11 +60,16 @@ jobs:
         id: tf_api
         run: |
           cd infra_core
-          # Convert JSON list to space-separated string for $GITHUB_ENV
-          API_IDS=$(terraform output -json api_instance_ids | jq -r '.[]' | xargs)
-          echo "API_INSTANCE_IDS=$API_IDS" >> $GITHUB_ENV
-          # Debug: show what was received
-          echo "DEBUG: Retrieved API instance IDs: $API_IDS"
+          # Save output to file for debugging
+          terraform output -json api_instance_ids > api_output.json || echo "No API output yet"
+          if [ -s api_output.json ]; then
+            API_IDS=$(jq -r '.[]' api_output.json | xargs)
+            echo "API_INSTANCE_IDS=$API_IDS" >> $GITHUB_ENV
+            echo "DEBUG: Retrieved API instance IDs: $API_IDS"
+          else
+            echo "ERROR: No API instance IDs found in Terraform output!"
+            exit 1
+          fi
 
       # ============================
       # Get Worker Instance IDs from Terraform (safe for lists)
@@ -75,10 +78,15 @@ jobs:
         id: tf_worker
         run: |
           cd infra_core
-          WORKER_IDS=$(terraform output -json worker_instance_ids | jq -r '.[]' | xargs)
-          echo "WORKER_IDS=$WORKER_IDS" >> $GITHUB_ENV
-          # Debug: show what was received
-          echo "DEBUG: Retrieved Worker instance IDs: $WORKER_IDS"
+          terraform output -json worker_instance_ids > worker_output.json || echo "No Worker output yet"
+          if [ -s worker_output.json ]; then
+            WORKER_IDS=$(jq -r '.[]' worker_output.json | xargs)
+            echo "WORKER_IDS=$WORKER_IDS" >> $GITHUB_ENV
+            echo "DEBUG: Retrieved Worker instance IDs: $WORKER_IDS"
+          else
+            echo "ERROR: No Worker instance IDs found in Terraform output!"
+            exit 1
+          fi
 
       # ============================
       # Deploy API via SSM using setup script
