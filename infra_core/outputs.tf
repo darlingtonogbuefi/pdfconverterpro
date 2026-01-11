@@ -151,4 +151,15 @@ output "github_actions_role_arn" {
   value       = aws_iam_role.github_actions.arn
 }
 
+# Output API EC2 IDs
+output "api_instance_ids" {
+  description = "The EC2 instance IDs for API servers"
+  value       = aws_instance.api.*.id
+}
+
+# Output Worker EC2 IDs
+output "worker_instance_ids" {
+  description = "The EC2 instance IDs for Worker servers"
+  value       = aws_instance.worker.*.id
+}
 

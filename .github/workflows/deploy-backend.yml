@@ -37,18 +37,48 @@ jobs:
         run: aws sts get-caller-identity
 
       # ============================
+      # Terraform Init & Apply (optional)
+      # ============================
+      - name: Terraform Init & Apply
+        run: |
+          cd infra_core
+          terraform init
+          terraform apply -auto-approve
+
+      # ============================
+      # Get API Instance IDs from Terraform
+      # ============================
+      - name: Get API Instance IDs
+        id: tf_api
+        run: |
+          cd infra_core
+          API_IDS=$(terraform output -json api_instance_ids | jq -r '.[]')
+          echo "API_INSTANCE_IDS=$API_IDS" >> $GITHUB_ENV
+
+      # ============================
+      # Get Worker Instance IDs from Terraform
+      # ============================
+      - name: Get Worker Instance IDs
+        id: tf_worker
+        run: |
+          cd infra_core
+          WORKER_IDS=$(terraform output -json worker_instance_ids | jq -r '.[]')
+          echo "WORKER_INSTANCE_IDS=$WORKER_IDS" >> $GITHUB_ENV
+
+      # ============================
       # Deploy API via SSM using setup script
       # ============================
       - name: Deploy API via SSM
         run: |
           aws ssm send-command \
             --document-name "AWS-RunShellScript" \
-            --targets "Key=tag:Role,Values=api" \
+            --instance-ids $API_INSTANCE_IDS \
             --comment "Deploy API from GitHub Actions" \
             --parameters "commands=[
               'chmod +x /home/ubuntu/pdfconverterpro/setup_api.sh',
               '/home/ubuntu/pdfconverterpro/setup_api.sh'
-            ]"
+            ]" \
+            --timeout-seconds 3600
 
       # ============================
       # Deploy Worker via SSM using setup script
@@ -57,9 +87,10 @@ jobs:
         run: |
           aws ssm send-command \
             --document-name "AWS-RunShellScript" \
-            --targets "Key=tag:Role,Values=worker" \
+            --instance-ids $WORKER_INSTANCE_IDS \
             --comment "Deploy Worker from GitHub Actions" \
             --parameters "commands=[
               'chmod +x /home/ubuntu/pdfconverterpro/setup_worker.sh',
               '/home/ubuntu/pdfconverterpro/setup_worker.sh'
-            ]"
+            ]" \
+            --timeout-seconds 3600
