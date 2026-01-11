@@ -143,25 +143,18 @@ fi
 sudo -u $APP_USER mkdir -p /home/$APP_USER/.cache/pip
 sudo chown -R $APP_USER:$APP_USER /home/$APP_USER/.cache
 
-# Activate venv and install Python packages
+# Activate venv
 source "$VENV_DIR/bin/activate"
 
-if pip install --upgrade pip && pip install -r requirements.txt; then
-    log_success "Python dependencies installed"
-else
-    log_error "Failed to install Python dependencies"
-    deactivate
-    exit 1
-fi
+# Upgrade pip and install requirements as correct user
+sudo -H -u $APP_USER HOME=/home/$APP_USER pip install --upgrade pip
+sudo -H -u $APP_USER HOME=/home/$APP_USER pip install -r requirements.txt
 
-# Explicitly install camelot-py[cv] to ensure OpenCV extras
-if pip install "camelot-py[cv]"; then
-    log_success "camelot-py[cv] installed successfully"
-else
-    log_error "Failed to install camelot-py[cv]"
-    deactivate
-    exit 1
-fi
+# Install OpenCV explicitly for Camelot
+sudo -H -u $APP_USER HOME=/home/$APP_USER pip install opencv-python
+sudo -H -u $APP_USER HOME=/home/$APP_USER pip install camelot-py
+
+log_success "Python dependencies including camelot and OpenCV installed"
 
 deactivate
 

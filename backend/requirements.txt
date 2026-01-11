@@ -48,7 +48,7 @@ tabula
 # Data & Tables
 # =========================
 pandas
-camelot-py[cv]
+camelot-py
 opencv-python               # Required by camelot-py[cv]
 
 # =========================
