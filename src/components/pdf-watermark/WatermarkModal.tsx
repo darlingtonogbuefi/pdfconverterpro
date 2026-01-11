@@ -1,4 +1,4 @@
-// src/components/pdf-watermark/WatermarkModal.tsx 
+// src/components/pdf-watermark/WatermarkModal.tsx  
 import { useState, useCallback } from "react";
 import { pdfWatermark } from "@/lib/converters";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -42,8 +42,12 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const placeholderText = "Select predefined text";
+
+  // Button active logic
   const isApplyActive =
-    (type === "image" && image) || (type === "text" && (text || text === ""));
+    (type === "image" && image) ||
+    (type === "text" && text.trim() !== "" && text !== placeholderText);
 
   const handleFileInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,14 +120,13 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
   const previewColor = hexToRgba("#999999", 1);
   const previewBrightness = 1 + (1 - opacity) * 0.7;
 
-  // Separate classes for image and text previews
+  // Preview container classes
   const imagePreviewClass =
     "border-2 border-dashed rounded flex items-center justify-center bg-white w-4/5 max-w-full aspect-[2/1]";
   const textPreviewClass =
     "border-2 border-dashed rounded flex items-center justify-center bg-white w-4/5 max-w-full aspect-[2.5/1]";
 
-  // Determine text to display in preview
-  const previewText = text || "Select predefined text";
+  const previewText = text || placeholderText;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -184,7 +187,7 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
                 value={text}
                 onChange={(e) => setText(e.target.value)}
               >
-                <option value="">Select predefined text</option>
+                <option value="">{placeholderText}</option>
                 {predefinedTexts.map((t) => (
                   <option key={t} value={t}>
                     {t}
