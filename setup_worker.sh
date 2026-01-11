@@ -1,6 +1,6 @@
 #!/bin/bash
 # setup_worker.sh
-set -e
+set -euo pipefail
 
 APP_USER="ubuntu"
 APP_DIR="/home/ubuntu/pdfconverterpro"
@@ -9,73 +9,116 @@ REPO_URL="https://github.com/darlingtonogbuefi/pdfconverterpro.git"
 SERVICE_NAME="pdfconverterpro-worker"
 ENV_FILE="/etc/default/$SERVICE_NAME"
 
+# -------------------------
+# Helper functions
+# -------------------------
+log_step() {
+    echo "=============================="
+    echo " STEP: $1"
+    echo "=============================="
+}
+
+log_success() {
+    echo "✅ SUCCESS: $1"
+}
+
+log_error() {
+    echo "❌ ERROR: $1"
+}
+
 # -----------------------------------
 # REQUIRED ENV VARS
 # -----------------------------------
-if [ -z "$FILES_BUCKET" ]; then
-    echo "ERROR: FILES_BUCKET environment variable is not set"
-    echo "Example:"
-    echo "    export FILES_BUCKET=pdfconvertpro-files-prod"
+log_step "Checking required environment variables"
+if [ -z "${FILES_BUCKET:-}" ]; then
+    log_error "FILES_BUCKET environment variable is not set"
+    echo "Example: export FILES_BUCKET=pdfconvertpro-files-prod"
     exit 1
 fi
 
 AWS_REGION="${AWS_REGION:-us-east-1}"
 
-echo "=============================="
-echo " Setting up Worker service"
-echo " FILES_BUCKET=$FILES_BUCKET"
-echo " AWS_REGION=$AWS_REGION"
-echo "=============================="
+echo "FILES_BUCKET=$FILES_BUCKET"
+echo "AWS_REGION=$AWS_REGION"
 
 # -----------------------------------
 # System packages
 # -----------------------------------
-apt-get update
-apt-get install -y python3 python3-venv python3-pip git snapd libgl1 libglib2.0-0
+log_step "Installing system packages"
+if apt-get update && apt-get install -y python3 python3-venv python3-pip git snapd libgl1 libglib2.0-0; then
+    log_success "System packages installed"
+else
+    log_error "Failed to install system packages"
+fi
 
 # -----------------------------------
 # Clone or update repository
 # -----------------------------------
+log_step "Cloning or updating repository"
 cd /home/ubuntu
 if [ ! -d "$APP_DIR" ]; then
     echo "Cloning repository..."
-    sudo -u $APP_USER git clone "$REPO_URL" "$APP_DIR"
+    if sudo -u $APP_USER git clone "$REPO_URL" "$APP_DIR"; then
+        log_success "Repository cloned"
+    else
+        log_error "Failed to clone repository"
+    fi
 else
     echo "Updating repository..."
     cd "$APP_DIR"
-    sudo -u $APP_USER git pull origin main
+    if sudo -u $APP_USER git pull origin main; then
+        log_success "Repository updated"
+    else
+        log_error "Failed to update repository"
+    fi
 fi
 
 # -----------------------------------
 # Python virtual environment
 # -----------------------------------
+log_step "Setting up Python virtual environment"
 cd "$APP_DIR"
 if [ ! -d "$VENV_DIR" ]; then
     echo "Creating virtual environment..."
-    sudo -u $APP_USER python3 -m venv venv
+    if sudo -u $APP_USER python3 -m venv venv; then
+        log_success "Virtual environment created"
+    else
+        log_error "Failed to create virtual environment"
+    fi
 fi
 
 source "$VENV_DIR/bin/activate"
-pip install --upgrade pip
-pip install -r requirements.txt
+
+if pip install --upgrade pip && pip install -r requirements.txt; then
+    log_success "Python dependencies installed"
+else
+    log_error "Failed to install Python dependencies"
+fi
+
 deactivate
 
 # -----------------------------------
 # Environment file for systemd
 # -----------------------------------
-cat > "$ENV_FILE" <<EOF
+log_step "Writing environment file for systemd"
+if cat > "$ENV_FILE" <<EOF
 FILES_BUCKET=$FILES_BUCKET
 AWS_REGION=$AWS_REGION
 EOF
-
-chmod 600 "$ENV_FILE"
+then
+    chmod 600 "$ENV_FILE"
+    log_success "Environment file created at $ENV_FILE"
+else
+    log_error "Failed to create environment file"
+fi
 
 # -----------------------------------
 # Create systemd service for Worker
 # -----------------------------------
+log_step "Creating systemd service for Worker"
 SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
 
-cat > "$SERVICE_FILE" <<EOF
+if cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=PDF Converter Pro Worker
 After=network-online.target
@@ -95,31 +138,51 @@ EnvironmentFile=$ENV_FILE
 [Install]
 WantedBy=multi-user.target
 EOF
+then
+    log_success "Systemd service file created at $SERVICE_FILE"
+else
+    log_error "Failed to create systemd service file"
+fi
 
 # -----------------------------------
 # Enable & start service
 # -----------------------------------
-systemctl daemon-reload
-systemctl enable "$SERVICE_NAME"
-systemctl restart "$SERVICE_NAME"
-systemctl status "$SERVICE_NAME" --no-pager
+log_step "Enabling and starting Worker service"
+if systemctl daemon-reload && systemctl enable "$SERVICE_NAME" && systemctl restart "$SERVICE_NAME"; then
+    log_success "Service $SERVICE_NAME enabled and started"
+else
+    log_error "Failed to enable/start service $SERVICE_NAME"
+fi
+
+# Show service status
+systemctl status "$SERVICE_NAME" --no-pager || echo "⚠️ Could not retrieve service status"
 
 # -----------------------------------
 # AWS SSM Agent (Snap) - last
 # -----------------------------------
+log_step "Ensuring AWS SSM Agent is installed and running"
 if ! snap list | grep -q amazon-ssm-agent; then
     echo "Installing AWS SSM Agent..."
-    snap install amazon-ssm-agent --classic
+    if snap install amazon-ssm-agent --classic; then
+        log_success "AWS SSM Agent installed"
+    else
+        log_error "Failed to install AWS SSM Agent"
+    fi
 fi
 
 if ! snap services | grep -q amazon-ssm-agent; then
-    snap enable amazon-ssm-agent
+    if snap enable amazon-ssm-agent; then
+        log_success "SSM Agent enabled"
+    else
+        log_error "Failed to enable SSM Agent"
+    fi
 fi
 
-systemctl enable snap.amazon-ssm-agent.amazon-ssm-agent.service
-systemctl restart snap.amazon-ssm-agent.amazon-ssm-agent.service || true
+if systemctl enable snap.amazon-ssm-agent.amazon-ssm-agent.service && systemctl restart snap.amazon-ssm-agent.amazon-ssm-agent.service; then
+    log_success "SSM Agent service enabled and restarted"
+else
+    log_error "Failed to start SSM Agent service"
+fi
 
-echo "=============================="
-echo " Worker setup complete and running"
-echo " FILES_BUCKET=$FILES_BUCKET"
-echo "=============================="
+log_step "Worker setup complete and running"
+echo "FILES_BUCKET=$FILES_BUCKET"
