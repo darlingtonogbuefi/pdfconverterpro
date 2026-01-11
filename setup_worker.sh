@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 # setup_worker.sh
 
 set -euo pipefail
@@ -139,12 +139,26 @@ if [ ! -d "$VENV_DIR" ]; then
     fi
 fi
 
+# Fix pip cache permissions
+sudo -u $APP_USER mkdir -p /home/$APP_USER/.cache/pip
+sudo chown -R $APP_USER:$APP_USER /home/$APP_USER/.cache
+
+# Activate venv and install Python packages
 source "$VENV_DIR/bin/activate"
 
 if pip install --upgrade pip && pip install -r requirements.txt; then
     log_success "Python dependencies installed"
 else
     log_error "Failed to install Python dependencies"
+    deactivate
+    exit 1
+fi
+
+# Explicitly install camelot-py[cv] to ensure OpenCV extras
+if pip install "camelot-py[cv]"; then
+    log_success "camelot-py[cv] installed successfully"
+else
+    log_error "Failed to install camelot-py[cv]"
     deactivate
     exit 1
 fi
