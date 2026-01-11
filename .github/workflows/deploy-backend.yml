@@ -54,6 +54,14 @@ jobs:
           terraform init -input=false
 
       # ============================
+      # Terraform Apply (ensure outputs exist)
+      # ============================
+      - name: Terraform Apply
+        run: |
+          cd infra_core
+          terraform apply -auto-approve
+
+      # ============================
       # Get API Instance IDs from Terraform (safe for lists)
       # ============================
       - name: Get API Instance IDs
@@ -61,7 +69,7 @@ jobs:
         run: |
           cd infra_core
           # Save output to file for debugging
-          terraform output -json api_instance_ids > api_output.json || echo "No API output yet"
+          terraform output -json api_instance_ids > api_output.json
           if [ -s api_output.json ]; then
             API_IDS=$(jq -r '.[]' api_output.json | xargs)
             echo "API_INSTANCE_IDS=$API_IDS" >> $GITHUB_ENV
@@ -78,7 +86,7 @@ jobs:
         id: tf_worker
         run: |
           cd infra_core
-          terraform output -json worker_instance_ids > worker_output.json || echo "No Worker output yet"
+          terraform output -json worker_instance_ids > worker_output.json
           if [ -s worker_output.json ]; then
             WORKER_IDS=$(jq -r '.[]' worker_output.json | xargs)
             echo "WORKER_IDS=$WORKER_IDS" >> $GITHUB_ENV
@@ -93,10 +101,10 @@ jobs:
       # ============================
       - name: Deploy API via SSM
         run: |
-          echo "DEBUG: Using API_INSTANCE_IDS=$API_INSTANCE_IDS"
+          echo "DEBUG: Using API_INSTANCE_IDS=$API_IDS"
           aws ssm send-command \
             --document-name "AWS-RunShellScript" \
-            --instance-ids $API_INSTANCE_IDS \
+            --instance-ids $API_IDS \
             --comment "Deploy API from GitHub Actions" \
             --parameters "commands=[
               'chmod +x /home/ubuntu/pdfconverterpro/setup_api.sh',
