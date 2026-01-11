@@ -60,10 +60,12 @@ jobs:
         id: tf_api
         run: |
           cd infra_core
-          # Save output to file for debugging
-          terraform output -json api_instance_ids > api_output.json || echo "No API output yet"
-          if [ -s api_output.json ]; then
-            API_IDS=$(jq -r '.[]' api_output.json | xargs)
+          echo "DEBUG: Terraform API output:"
+          terraform output -json api_instance_ids
+
+          # Read JSON safely
+          API_IDS=$(terraform output -json api_instance_ids 2>/dev/null | jq -r '.[]? // empty' | xargs)
+          if [ -n "$API_IDS" ]; then
             echo "API_INSTANCE_IDS=$API_IDS" >> $GITHUB_ENV
             echo "DEBUG: Retrieved API instance IDs: $API_IDS"
           else
@@ -78,9 +80,11 @@ jobs:
         id: tf_worker
         run: |
           cd infra_core
-          terraform output -json worker_instance_ids > worker_output.json || echo "No Worker output yet"
-          if [ -s worker_output.json ]; then
-            WORKER_IDS=$(jq -r '.[]' worker_output.json | xargs)
+          echo "DEBUG: Terraform Worker output:"
+          terraform output -json worker_instance_ids
+
+          WORKER_IDS=$(terraform output -json worker_instance_ids 2>/dev/null | jq -r '.[]? // empty' | xargs)
+          if [ -n "$WORKER_IDS" ]; then
             echo "WORKER_IDS=$WORKER_IDS" >> $GITHUB_ENV
             echo "DEBUG: Retrieved Worker instance IDs: $WORKER_IDS"
           else
