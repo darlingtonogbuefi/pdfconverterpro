@@ -121,10 +121,10 @@ jobs:
             --parameters "commands=[
               'if [ ! -d /home/ubuntu/pdfconverterpro ]; then git clone https://github.com/darlingtonogbuefi/pdfconverterpro.git /home/ubuntu/pdfconverterpro; fi',
               'cd /home/ubuntu/pdfconverterpro',
+              'git config --global --add safe.directory /home/ubuntu/pdfconverterpro',
               'git fetch origin',
               'git reset --hard origin/main',
-              'chmod +x setup_api.sh setup_worker.sh',
-              'bash setup_api.sh'
+              'if [ -f setup_api.sh ]; then chmod +x setup_api.sh; bash setup_api.sh; fi'
             ]" \
             --timeout-seconds 3600 \
             --query "Command.CommandId" --output text)
@@ -163,10 +163,10 @@ jobs:
             --parameters "commands=[
               'if [ ! -d /home/ubuntu/pdfconverterpro ]; then git clone https://github.com/darlingtonogbuefi/pdfconverterpro.git /home/ubuntu/pdfconverterpro; fi',
               'cd /home/ubuntu/pdfconverterpro',
+              'git config --global --add safe.directory /home/ubuntu/pdfconverterpro',
               'git fetch origin',
               'git reset --hard origin/main',
-              'chmod +x setup_api.sh setup_worker.sh',
-              'bash setup_worker.sh'
+              'if [ -f setup_worker.sh ]; then chmod +x setup_worker.sh; bash setup_worker.sh; fi'
             ]" \
             --timeout-seconds 3600 \
             --query "Command.CommandId" --output text)
