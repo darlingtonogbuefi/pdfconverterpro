@@ -1,4 +1,5 @@
 #!/bin/bash
+# setup_worker.sh
 set -e
 
 APP_USER="ubuntu"
@@ -6,9 +7,24 @@ APP_DIR="/home/ubuntu/pdfconverterpro"
 VENV_DIR="$APP_DIR/venv"
 REPO_URL="https://github.com/darlingtonogbuefi/pdfconverterpro.git"
 SERVICE_NAME="pdfconverterpro-worker"
+ENV_FILE="/etc/default/$SERVICE_NAME"
+
+# -----------------------------------
+# REQUIRED ENV VARS
+# -----------------------------------
+if [ -z "$FILES_BUCKET" ]; then
+    echo "ERROR: FILES_BUCKET environment variable is not set"
+    echo "Example:"
+    echo "    export FILES_BUCKET=pdfconvertpro-files-prod"
+    exit 1
+fi
+
+AWS_REGION="${AWS_REGION:-us-east-1}"
 
 echo "=============================="
 echo " Setting up Worker service"
+echo " FILES_BUCKET=$FILES_BUCKET"
+echo " AWS_REGION=$AWS_REGION"
 echo "=============================="
 
 # -----------------------------------
@@ -45,6 +61,16 @@ pip install -r requirements.txt
 deactivate
 
 # -----------------------------------
+# Environment file for systemd
+# -----------------------------------
+cat > "$ENV_FILE" <<EOF
+FILES_BUCKET=$FILES_BUCKET
+AWS_REGION=$AWS_REGION
+EOF
+
+chmod 600 "$ENV_FILE"
+
+# -----------------------------------
 # Create systemd service for Worker
 # -----------------------------------
 SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
@@ -52,27 +78,34 @@ SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=PDF Converter Pro Worker
-After=network.target
+After=network-online.target
+Wants=network-online.target
 
 [Service]
+Type=simple
 User=$APP_USER
 WorkingDirectory=$APP_DIR
 ExecStart=$VENV_DIR/bin/python -m backend.worker
 Restart=always
 RestartSec=5
-Environment=PATH=$VENV_DIR/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+StandardOutput=journal
+StandardError=journal
+EnvironmentFile=$ENV_FILE
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
+# -----------------------------------
+# Enable & start service
+# -----------------------------------
 systemctl daemon-reload
 systemctl enable "$SERVICE_NAME"
 systemctl restart "$SERVICE_NAME"
 systemctl status "$SERVICE_NAME" --no-pager
 
 # -----------------------------------
-# AWS SSM Agent (Snap) – last
+# AWS SSM Agent (Snap) - last
 # -----------------------------------
 if ! snap list | grep -q amazon-ssm-agent; then
     echo "Installing AWS SSM Agent..."
@@ -88,4 +121,5 @@ systemctl restart snap.amazon-ssm-agent.amazon-ssm-agent.service || true
 
 echo "=============================="
 echo " Worker setup complete and running"
+echo " FILES_BUCKET=$FILES_BUCKET"
 echo "=============================="

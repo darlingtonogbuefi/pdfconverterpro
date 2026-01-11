@@ -1,4 +1,3 @@
-# Deploy Backend & Worker to EC2 
 # .github/workflows/deploy-backend.yml
 name: Deploy Backend & Worker to EC2 (SSM + OIDC)
 
@@ -38,7 +37,7 @@ jobs:
         run: aws sts get-caller-identity
 
       # ============================
-      # Deploy API via SSM
+      # Deploy API via SSM using setup script
       # ============================
       - name: Deploy API via SSM
         run: |
@@ -46,20 +45,13 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --targets "Key=tag:Role,Values=api" \
             --comment "Deploy API from GitHub Actions" \
-            --parameters '{
-              "commands": [
-                "cd /home/ubuntu/pdfconverterpro",
-                "git pull origin main",
-                "python3 -m venv venv || true",
-                "source venv/bin/activate",
-                "pip install --upgrade pip",
-                "pip install -r requirements.txt",
-                "sudo systemctl restart pdfconvertpro-api || nohup python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 \\&"
-              ]
-            }'
+            --parameters "commands=[
+              'chmod +x /home/ubuntu/pdfconverterpro/setup_api.sh',
+              '/home/ubuntu/pdfconverterpro/setup_api.sh'
+            ]"
 
       # ============================
-      # Deploy Worker via SSM
+      # Deploy Worker via SSM using setup script
       # ============================
       - name: Deploy Worker via SSM
         run: |
@@ -67,14 +59,7 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --targets "Key=tag:Role,Values=worker" \
             --comment "Deploy Worker from GitHub Actions" \
-            --parameters '{
-              "commands": [
-                "cd /home/ubuntu/pdfconverterpro",
-                "git pull origin main",
-                "python3 -m venv venv || true",
-                "source venv/bin/activate",
-                "pip install --upgrade pip",
-                "pip install -r requirements.txt",
-                "sudo systemctl restart pdfconvertpro-worker || nohup python backend/worker.py \\&"
-              ]
-            }'
+            --parameters "commands=[
+              'chmod +x /home/ubuntu/pdfconverterpro/setup_worker.sh',
+              '/home/ubuntu/pdfconverterpro/setup_worker.sh'
+            ]"
