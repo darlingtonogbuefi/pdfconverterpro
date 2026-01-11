@@ -91,6 +91,16 @@ fi
 # Clone or update repository
 # -----------------------------------
 log_step "Cloning or updating repository"
+
+# Step 0: Fix Git folder permissions if it exists
+if [ -d "$APP_DIR" ]; then
+    sudo chown -R $APP_USER:$APP_USER "$APP_DIR/.git"
+    sudo chmod -R u+rwX "$APP_DIR/.git"
+
+    # Ensure entire app directory is owned by the app user
+    sudo chown -R $APP_USER:$APP_USER "$APP_DIR"
+fi
+
 cd /home/ubuntu
 if [ ! -d "$APP_DIR" ]; then
     echo "Cloning repository..."
