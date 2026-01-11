@@ -20,11 +20,11 @@ log_step() {
 }
 
 log_success() {
-    echo "✅ SUCCESS: $1"
+    echo "SUCCESS: $1"
 }
 
 log_error() {
-    echo "❌ ERROR: $1"
+    echo "ERROR: $1"
 }
 
 # -----------------------------------
@@ -46,7 +46,7 @@ echo "AWS_REGION=$AWS_REGION"
 # System packages
 # -----------------------------------
 log_step "Installing system packages"
-if apt-get update && apt-get install -y python3 python3-venv python3-pip git snapd libgl1 libglib2.0-0; then
+if apt-get update && apt-get install -y python3 python3-venv python3-pip git snapd libgl1 libglib2.0-0 tesseract-ocr; then
     log_success "System packages installed"
 else
     log_error "Failed to install system packages"
