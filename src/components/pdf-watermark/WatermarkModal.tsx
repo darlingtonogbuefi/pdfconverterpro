@@ -1,4 +1,4 @@
-// src/components/pdf-watermark/WatermarkModal.tsx  
+// src/components/pdf-watermark/WatermarkModal.tsx
 import { useState, useCallback } from "react";
 import { pdfWatermark } from "@/lib/converters";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -122,7 +122,7 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
 
   // Preview container classes
   const imagePreviewClass =
-    "border-2 border-dashed rounded flex items-center justify-center bg-white w-4/5 max-w-full aspect-[2/1]";
+    "border-2 border-dashed rounded flex items-center justify-center bg-white w-4/5 max-w-full aspect-[2.5/1]";
   const textPreviewClass =
     "border-2 border-dashed rounded flex items-center justify-center bg-white w-4/5 max-w-full aspect-[2.5/1]";
 
@@ -146,7 +146,7 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
         <h2 className="text-sm font-semibold mb-4">Add Watermark</h2>
 
         {/* Tabs */}
-        <div className="flex gap-6 border-b mb-3">
+        <div className="flex gap-6 border-b mb-0">
           <button
             onClick={() => setType("image")}
             className={`pb-1 transition-colors ${
@@ -174,14 +174,12 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
         {type === "text" && (
           <>
             <div className="flex gap-2 w-full">
-              {/* Input field */}
               <input
                 className="border rounded text-xs flex-1 p-1"
                 placeholder="Enter Watermark text"
                 value={text}
                 onChange={(e) => setText(e.target.value)}
               />
-              {/* Dropdown */}
               <select
                 className="border rounded text-xs p-1 w-52"
                 value={text}
@@ -196,7 +194,6 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
               </select>
             </div>
 
-            {/* Text Preview */}
             <div className="mt-3 flex justify-center">
               <div className={textPreviewClass}>
                 <div
@@ -220,7 +217,9 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
 
         {/* Image Watermark */}
         {type === "image" && (
-          <div className="mt-3 flex justify-center">
+          <div className="mt-3 flex flex-col justify-start items-center w-full">
+            {/* Spacer to match text input + select row height */}
+            <div className="h-9 w-full" />
             <div
               className={`${imagePreviewClass} ${
                 isDragging ? "border-blue-500 bg-blue-50 scale-[1.02]" : ""
