@@ -1,4 +1,4 @@
-# .github/workflows/deploy-backend.yml
+# .github/workflows/deploy-backend.yml 
 
 name: Deploy Backend & Worker to EC2 (SSM + OIDC)
 
@@ -63,8 +63,8 @@ jobs:
           echo "DEBUG: Terraform API output:"
           terraform output -json api_instance_ids
 
-          # Read JSON safely
-          API_IDS=$(terraform output -json api_instance_ids 2>/dev/null | jq -r '.[]? // empty' | xargs)
+          # Read JSON safely (CI-safe)
+          API_IDS=$(terraform output -json api_instance_ids | jq -r '.[]')
           if [ -n "$API_IDS" ]; then
             echo "API_INSTANCE_IDS=$API_IDS" >> $GITHUB_ENV
             echo "DEBUG: Retrieved API instance IDs: $API_IDS"
@@ -83,7 +83,8 @@ jobs:
           echo "DEBUG: Terraform Worker output:"
           terraform output -json worker_instance_ids
 
-          WORKER_IDS=$(terraform output -json worker_instance_ids 2>/dev/null | jq -r '.[]? // empty' | xargs)
+          # Read JSON safely (CI-safe)
+          WORKER_IDS=$(terraform output -json worker_instance_ids | jq -r '.[]')
           if [ -n "$WORKER_IDS" ]; then
             echo "WORKER_IDS=$WORKER_IDS" >> $GITHUB_ENV
             echo "DEBUG: Retrieved Worker instance IDs: $WORKER_IDS"
