@@ -37,6 +37,14 @@ jobs:
         run: aws sts get-caller-identity
 
       # ============================
+      # Setup Terraform (version >= 1.6.0)
+      # ============================
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.7.0
+
+      # ============================
       # Get API Instance IDs from Terraform
       # ============================
       - name: Get API Instance IDs
