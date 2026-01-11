@@ -1,4 +1,4 @@
-// src/components/pdf-watermark/WatermarkModal.tsx
+// src/components/pdf-watermark/WatermarkModal.tsx 
 import { useState, useCallback } from "react";
 import { pdfWatermark } from "@/lib/converters";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -116,7 +116,10 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
   const previewColor = hexToRgba("#999999", 1);
   const previewBrightness = 1 + (1 - opacity) * 0.7;
 
-  const previewContainerClass =
+  // Separate classes for image and text previews
+  const imagePreviewClass =
+    "border-2 border-dashed rounded flex items-center justify-center bg-white w-4/5 max-w-full aspect-[2/1]";
+  const textPreviewClass =
     "border-2 border-dashed rounded flex items-center justify-center bg-white w-4/5 max-w-full aspect-[2.5/1]";
 
   // Determine text to display in preview
@@ -190,9 +193,9 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
               </select>
             </div>
 
-            {/* Preview */}
+            {/* Text Preview */}
             <div className="mt-3 flex justify-center">
-              <div className={previewContainerClass}>
+              <div className={textPreviewClass}>
                 <div
                   className="select-none text-center max-w-full max-h-full overflow-hidden flex items-center justify-center"
                   style={{
@@ -216,7 +219,7 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
         {type === "image" && (
           <div className="mt-3 flex justify-center">
             <div
-              className={`${previewContainerClass} ${
+              className={`${imagePreviewClass} ${
                 isDragging ? "border-blue-500 bg-blue-50 scale-[1.02]" : ""
               }`}
               onClick={() =>
