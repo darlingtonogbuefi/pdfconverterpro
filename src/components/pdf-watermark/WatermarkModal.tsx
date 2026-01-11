@@ -105,7 +105,6 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
     }
   };
 
-  // convert hex color to rgba
   const hexToRgba = (hex: string, alpha: number) => {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
@@ -113,25 +112,20 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
 
-  const previewColor = hexToRgba("#999999", 1); // always full color
-
-  // adjust image brightness to match text preview
+  const previewColor = hexToRgba("#999999", 1);
   const previewBrightness = 1 + (1 - opacity) * 0.7;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
         className="
-          fixed inset-auto
-          left-1/2 top-1/2
-          -translate-x-1/2 -translate-y-1/2
-          w-[45rem] sm:w-[33.75rem] md:w-[45rem]
-          h-[33.75rem] sm:h-[25.5rem] md:h-[33.75rem]
-          max-w-none max-h-none
+          fixed inset-4
+          max-w-full max-h-full
           !rounded
           flex flex-col p-4
           bg-white
           text-xs
+          overflow-auto
         "
       >
         <h2 className="text-sm font-semibold mb-4">Add Watermark</h2>
@@ -185,18 +179,16 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
             </select>
 
             {text && (
-              <div className="mt-3 flex justify-center">
+              <div className="mt-3 flex justify-center w-full">
                 <div
-                  className="border-2 border-dashed rounded flex items-center justify-center bg-white"
-                  style={{ width: "567px", height: "114px" }}
+                  className="border-2 border-dashed rounded flex items-center justify-center bg-white w-full max-w-[90%] aspect-[5/1]"
                 >
                   <div
-                    className="select-none"
+                    className="select-none text-[5vw] sm:text-[2rem]"
                     style={{
                       fontFamily: "Helvetica",
-                      fontSize: "40px",
                       color: previewColor,
-                      opacity, // controlled by slider
+                      opacity,
                       lineHeight: 1,
                       whiteSpace: "nowrap",
                       transform: `rotate(${tile === "diagonal" ? 45 : 0}deg)`,
@@ -212,12 +204,12 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
 
         {/* Image Watermark */}
         {type === "image" && (
-          <div className="mt-3 flex justify-center">
+          <div className="mt-3 flex justify-center w-full">
             <div
               className={`border-2 border-dashed rounded flex items-center justify-center bg-white ${
                 isDragging ? "border-blue-500 bg-blue-50 scale-[1.02]" : ""
               }`}
-              style={{ width: "567px", height: "227px" }}
+              style={{ width: "100%", maxWidth: "90%", aspectRatio: "2.5 / 1" }}
               onClick={() =>
                 document.getElementById("watermark-file-input")?.click()
               }
@@ -240,7 +232,7 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
                     position: "relative",
                     width: "100%",
                     height: "100%",
-                    overflow: "hidden", // ensure image stays inside dashed box
+                    overflow: "hidden",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -252,14 +244,13 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
                     style={{
                       width: "100%",
                       height: "100%",
-                      objectFit: "contain", // key: fit within preview box
+                      objectFit: "contain",
                       opacity,
                       transform: "rotate(0deg)",
                       filter: `brightness(${previewBrightness})`,
                       display: "block",
                     }}
                   />
-                  {/* White overlay for fainter preview */}
                   <div
                     style={{
                       position: "absolute",
@@ -285,7 +276,7 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
         )}
 
         {/* Grid + Boxes + Opacity */}
-        <div className="mt-3 w-full flex justify-between text-xs">
+        <div className="mt-3 w-full flex flex-col sm:flex-row justify-between text-xs gap-4">
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-1.5">
               <label className="w-[10ch] whitespace-nowrap">
