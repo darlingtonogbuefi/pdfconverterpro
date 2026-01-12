@@ -47,8 +47,8 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
 
   // Button active logic
   const isApplyActive =
-    (type === "image" && image) ||
-    (type === "text" && text.trim() !== "" && text !== placeholderText);
+  (type === "image" && image) || (type === "text" && text);
+
 
   const handleFileInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
