@@ -134,10 +134,7 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
         className="
           fixed top-1/2 left-1/2
           transform -translate-x-1/2 -translate-y-1/2
-          max-w-2xl
-          w-full
-          min-w-0
-          mx-4
+          w-full max-w-3xl
           max-h-[80vh]
           !rounded
           flex flex-col p-4
