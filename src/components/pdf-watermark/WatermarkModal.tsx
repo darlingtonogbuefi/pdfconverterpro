@@ -42,7 +42,7 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const placeholderText = "Select predefined text";
+  const placeholderText = "--Select predefined text--";
 
   // Button active logic
   const isApplyActive =
