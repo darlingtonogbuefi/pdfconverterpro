@@ -123,9 +123,9 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
 
   // Preview container classes
   const imagePreviewClass =
-    "border-2 border-dashed rounded flex items-center justify-center bg-white w-4/5 max-w-full aspect-[3/1]";
+    "border-2 border-dashed rounded flex items-center justify-center bg-white w-4/5 max-w-full aspect-[2.5/1] relative max-w-[567px] max-h-[227px]";
   const textPreviewClass =
-    "border-2 border-dashed rounded flex items-center justify-center bg-white w-4/5 max-w-full aspect-[3/1]";
+    "border-2 border-dashed rounded flex items-center justify-center bg-white w-4/5 max-w-full aspect-[2.5/1] relative max-w-[567px] max-h-[227px]";
 
   const previewText = text || placeholderText;
 
@@ -135,8 +135,8 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
         className="
           fixed top-1/2 left-1/2
           transform -translate-x-1/2 -translate-y-1/2
-          w-full max-w-3xl
-          max-h-[80vh]
+          w-[95%] max-w-3xl
+          max-h-[90vh]
           !rounded
           flex flex-col p-4
           bg-white
