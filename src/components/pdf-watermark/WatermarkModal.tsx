@@ -71,6 +71,12 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
     setLoading(true);
 
     try {
+      // Ensure valid text before proceeding
+      if (type === "text" && (text.trim() === "" || text === placeholderText)) {
+        alert("Please enter valid text or select a predefined text.");
+        return;
+      }
+
       const payload = {
         watermark:
           type === "text"
@@ -101,6 +107,7 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
         imageFile: image || undefined,
       };
 
+      console.log("Watermark Payload:", payload);  // Check the payload
       const finalFile = await pdfWatermark(file, payload);
       onApply(finalFile.url);
     } catch (err: any) {
