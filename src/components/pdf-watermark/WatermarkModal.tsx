@@ -122,9 +122,9 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
 
   // Preview container classes
   const imagePreviewClass =
-    "border-2 border-dashed rounded flex items-center justify-center bg-white w-4/5 max-w-full aspect-[2.5/1]";
+    "border-2 border-dashed rounded flex items-center justify-center bg-white w-4/5 max-w-full aspect-[3/1]";
   const textPreviewClass =
-    "border-2 border-dashed rounded flex items-center justify-center bg-white w-4/5 max-w-full aspect-[2.5/1]";
+    "border-2 border-dashed rounded flex items-center justify-center bg-white w-4/5 max-w-full aspect-[3/1]";
 
   const previewText = text || placeholderText;
 
@@ -134,7 +134,10 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
         className="
           fixed top-1/2 left-1/2
           transform -translate-x-1/2 -translate-y-1/2
-          w-full max-w-3xl
+          max-w-2xl
+          w-full
+          min-w-0
+          mx-4
           max-h-[80vh]
           !rounded
           flex flex-col p-4
@@ -194,7 +197,8 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
               </select>
             </div>
 
-            <div className="mt-3 flex justify-center">
+            {/* Increased space and helper text */}
+            <div className="mt-1 flex flex-col items-center">
               <div className={textPreviewClass}>
                 <div
                   className="select-none text-center max-w-full max-h-full overflow-hidden flex items-center justify-center"
@@ -211,6 +215,9 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
                   {previewText}
                 </div>
               </div>
+              <p className="mt-2 text-gray-500 text-xs">
+                Enter Text or Select Predefined Text
+              </p>
             </div>
           </>
         )}
@@ -269,11 +276,18 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
                 </Button>
               )}
             </div>
+
+            {/* New text under preview only when no image */}
+            {!image && (
+              <p className="mt-2 text-gray-500 text-xs">
+                Select or Drag Image
+              </p>
+            )}
           </div>
         )}
 
         {/* Grid + Boxes + Opacity */}
-        <div className="mt-3 w-full flex flex-col md:flex-row justify-between text-xs gap-3">
+        <div className="mt-6 w-full flex flex-col md:flex-row justify-between text-xs gap-3">
           <div className="flex flex-col gap-3 flex-1">
             <div className="flex items-center gap-1.5">
               <label className="w-[10ch] whitespace-nowrap">Grid Type:</label>
