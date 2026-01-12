@@ -1,4 +1,5 @@
 // src/components/pdf-watermark/WatermarkModal.tsx
+
 import { useState, useCallback } from "react";
 import { pdfWatermark } from "@/lib/converters";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -249,7 +250,7 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
                   <img
                     src={URL.createObjectURL(image)}
                     alt="Preview"
-                    className="w-full h-full object-contain"
+                    className="max-w-full max-h-full object-contain"
                     style={{
                       opacity,
                       filter: `brightness(${previewBrightness})`,
@@ -274,12 +275,10 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
               )}
             </div>
 
-            {/* New text under preview only when no image */}
-            {!image && (
-              <p className="mt-2 text-gray-500 text-xs">
-                Select or Drag Image
-              </p>
-            )}
+            {/* New text under preview that is always visible */}
+            <p className="mt-2 text-gray-500 text-xs">
+              Select or Drag Image
+            </p>
           </div>
         )}
 
