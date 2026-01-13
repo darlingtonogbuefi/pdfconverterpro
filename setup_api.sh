@@ -1,4 +1,4 @@
-#!/bin/bash   
+#!/bin/bash    
 # setup_api.sh
 
 set -euo pipefail
@@ -63,6 +63,53 @@ else
     log_error "Failed to install system packages"
     exit 1
 fi
+
+# -----------------------------------
+# LOG MANAGEMENT START
+# -----------------------------------
+log_step "Configuring log rotation and journal limits"
+
+# 1️⃣ Limit systemd journal size
+sudo mkdir -p /etc/systemd/journald.conf.d
+sudo tee /etc/systemd/journald.conf.d/limits.conf >/dev/null <<EOF
+[Journal]
+SystemMaxUse=200M
+RuntimeMaxUse=100M
+EOF
+
+sudo systemctl daemon-reexec
+sudo systemctl restart systemd-journald
+log_success "systemd journal limits applied (SystemMaxUse=200M, RuntimeMaxUse=100M)"
+
+# 2️⃣ Configure logrotate for syslog
+sudo tee /etc/logrotate.d/syslog >/dev/null <<EOF
+/var/log/syslog
+{
+    daily
+    rotate 7
+    size 100M
+    compress
+    missingok
+    notifempty
+    delaycompress
+    postrotate
+        /usr/lib/rsyslog/rsyslog-rotate || true
+    endscript
+}
+EOF
+
+sudo logrotate -f /etc/logrotate.d/syslog
+log_success "logrotate configured for /var/log/syslog (max 100MB, 7 rotations)"
+
+# 3️⃣ Cleanup old logs immediately
+sudo journalctl --vacuum-size=200M
+sudo journalctl --vacuum-time=7d
+sudo rm -f /var/log/*.gz /var/log/*.[0-9] 2>/dev/null || true
+log_success "Old logs cleaned up"
+
+# -----------------------------------
+# LOG MANAGEMENT END
+# -----------------------------------
 
 # -----------------------------------
 # Verify OCR / PDF tools
