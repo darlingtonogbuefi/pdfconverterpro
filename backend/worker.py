@@ -4,7 +4,7 @@
 import boto3
 import json
 from backend.services.pdf_to_powerpoint import convert_pdf_to_ppt
-from backend.utils.s3_utils import download_file, upload_file
+from backend.utils.s3_utils import download_file, upload_file_to_s3
 from backend.core.config import AWS_REGION, SQS_QUEUE_URL
 import os
 import tempfile
@@ -63,7 +63,7 @@ while True:
             logging.info("PDF → PPT conversion complete")
 
             # Upload result PPTX to S3
-            upload_file(output_path, f"outputs/{job_id}/result.pptx")
+            upload_file_to_s3(output_path, f"outputs/{job_id}/result.pptx")
             logging.info(f"Uploaded PPTX to S3: outputs/{job_id}/result.pptx")
 
         finally:
