@@ -59,6 +59,7 @@ if apt-get update && apt-get install -y \
     ghostscript
 then
     log_success "System packages installed"
+    sudo snap set system refresh.retain=2
 else
     log_error "Failed to install system packages"
     exit 1
@@ -69,7 +70,7 @@ fi
 # -----------------------------------
 log_step "Configuring log rotation and journal limits"
 
-# 1️⃣ Limit systemd journal size
+# 1️ Limit systemd journal size
 sudo mkdir -p /etc/systemd/journald.conf.d
 sudo tee /etc/systemd/journald.conf.d/limits.conf >/dev/null <<EOF
 [Journal]
@@ -81,7 +82,7 @@ sudo systemctl daemon-reexec
 sudo systemctl restart systemd-journald
 log_success "systemd journal limits applied (SystemMaxUse=200M, RuntimeMaxUse=100M)"
 
-# 2️⃣ Configure logrotate for syslog
+# 2️ Configure logrotate for syslog
 sudo tee /etc/logrotate.d/syslog >/dev/null <<EOF
 /var/log/syslog
 {
@@ -101,7 +102,7 @@ EOF
 sudo logrotate -f /etc/logrotate.d/syslog
 log_success "logrotate configured for /var/log/syslog (max 100MB, 7 rotations)"
 
-# 3️⃣ Cleanup old logs immediately
+# 3️ Cleanup old logs immediately
 sudo journalctl --vacuum-size=200M
 sudo journalctl --vacuum-time=7d
 sudo rm -f /var/log/*.gz /var/log/*.[0-9] 2>/dev/null || true
