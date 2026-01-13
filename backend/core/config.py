@@ -12,7 +12,7 @@ pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
 
 # ---------- AWS / S3 / SQS ----------
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
-S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
+JOBS__FILES_S3_BUCKET = os.getenv("JOBS__FILES_S3_BUCKET")
 SQS_QUEUE_URL = os.getenv("SQS_QUEUE_URL")
 
 # ---------- Backend & API ----------

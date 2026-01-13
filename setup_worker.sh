@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash  
 # setup_worker.sh
 
 set -euo pipefail
@@ -31,15 +31,15 @@ log_error() {
 # REQUIRED ENV VARS
 # -----------------------------------
 log_step "Checking required environment variables"
-if [ -z "${FILES_BUCKET:-}" ]; then
-    log_error "FILES_BUCKET environment variable is not set"
-    echo "Example: export FILES_BUCKET=pdfconvertpro-files-prod"
+if [ -z "${JOBS__FILES_S3_BUCKET:-}" ]; then
+    log_error "JOBS__FILES_S3_BUCKET environment variable is not set"
+    echo "Example: export JOBS__FILES_S3_BUCKET=pdfconvertpro-files-prod"
     exit 1
 fi
 
 AWS_REGION="${AWS_REGION:-us-east-1}"
 
-echo "FILES_BUCKET=$FILES_BUCKET"
+echo "JOBS__FILES_S3_BUCKET=$JOBS__FILES_S3_BUCKET"
 echo "AWS_REGION=$AWS_REGION"
 
 # -----------------------------------
@@ -161,7 +161,7 @@ deactivate
 # -----------------------------------
 log_step "Writing environment file for systemd"
 if cat > "$ENV_FILE" <<EOF
-FILES_BUCKET=$FILES_BUCKET
+JOBS__FILES_S3_BUCKET=$JOBS__FILES_S3_BUCKET
 AWS_REGION=$AWS_REGION
 EOF
 then
@@ -248,4 +248,4 @@ else
 fi
 
 log_step "Worker setup complete and running"
-echo "FILES_BUCKET=$FILES_BUCKET"
+echo "JOBS__FILES_S3_BUCKET=$JOBS__FILES_S3_BUCKET"

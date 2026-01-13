@@ -60,20 +60,11 @@ jobs:
         id: tf_api
         run: |
           cd infra_core_terraform     
-          echo "DEBUG: Capturing Terraform API output"
-
           TF_API_RAW=$(terraform output -json api_instance_ids 2>/dev/null || true)
-          echo "DEBUG: Raw Terraform API output:"
-          echo "$TF_API_RAW"
-
           TF_API_JSON=$(echo "$TF_API_RAW" | sed -n 's/^::debug::stdout: \(.*\)%0A$/\1/p')
           TF_API_JSON=${TF_API_JSON:-$TF_API_RAW}
-
           echo "$TF_API_JSON" | jq -e . >/dev/null || { echo "ERROR: Invalid JSON!"; exit 1; }
-
           API_IDS=$(echo "$TF_API_JSON" | jq -r '.[]')
-          echo "DEBUG: Extracted API IDs: $API_IDS"
-
           if [ -n "$API_IDS" ]; then
             echo "API_INSTANCE_IDS=$API_IDS" >> $GITHUB_ENV
           else
@@ -87,20 +78,11 @@ jobs:
         id: tf_worker
         run: |
           cd infra_core_terraform
-          echo "DEBUG: Capturing Terraform Worker output"
-
           TF_WORKER_RAW=$(terraform output -json worker_instance_ids 2>/dev/null || true)
-          echo "DEBUG: Raw Terraform Worker output:"
-          echo "$TF_WORKER_RAW"
-
           TF_WORKER_JSON=$(echo "$TF_WORKER_RAW" | sed -n 's/^::debug::stdout: \(.*\)%0A$/\1/p')
           TF_WORKER_JSON=${TF_WORKER_JSON:-$TF_WORKER_RAW}
-
           echo "$TF_WORKER_JSON" | jq -e . >/dev/null || { echo "ERROR: Invalid JSON!"; exit 1; }
-
           WORKER_IDS=$(echo "$TF_WORKER_JSON" | jq -r '.[]')
-          echo "DEBUG: Extracted Worker IDs: $WORKER_IDS"
-
           if [ -n "$WORKER_IDS" ]; then
             echo "WORKER_IDS=$WORKER_IDS" >> $GITHUB_ENV
           else
@@ -110,11 +92,25 @@ jobs:
       # ============================
       # Deploy API via SSM (clone/update repo + run setup)
       # ============================
-      - name: Deploy API via SSM with logs
+      - name: Deploy API via SSM with all secrets
         env:
-          FILES_BUCKET: ${{ secrets.JOBS__FILES_S3_BUCKET }}
+          JOBS__FILES_S3_BUCKET: ${{ secrets.JOBS__FILES_S3_BUCKET }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          SQS_QUEUE_URL: ${{ secrets.SQS_QUEUE_URL }}
+          VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL }}
+          NUTRIENT_API_KEY: ${{ secrets.NUTRIENT_API_KEY }}
+          NUTRIENT_BASE_URL: ${{ secrets.NUTRIENT_BASE_URL }}
+          NUTRIENT_SESSION_URL: ${{ secrets.NUTRIENT_SESSION_URL }}
+          NUTRIENT_SIGN_URL: ${{ secrets.NUTRIENT_SIGN_URL }}
+          WORKER_HOST: ${{ secrets.WORKER_HOST }}
+          API_HOST: ${{ secrets.API_HOST }}
+          FRONTEND_S3_BUCKET: ${{ secrets.FRONTEND_S3_BUCKET }}
         run: |
-          echo "DEBUG: Deploying API to $API_INSTANCE_IDS with bucket $FILES_BUCKET"
+          echo "DEBUG: Deploying API to $API_INSTANCE_IDS with bucket $JOBS__FILES_S3_BUCKET"
 
           COMMAND_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
@@ -122,7 +118,21 @@ jobs:
             --comment "Deploy API from GitHub Actions" \
             --parameters "commands=[
               'export HOME=/home/ubuntu',
-              'export FILES_BUCKET=$FILES_BUCKET',
+              'export JOBS__FILES_S3_BUCKET=$JOBS__FILES_S3_BUCKET',
+              'export DB_HOST=$DB_HOST',
+              'export DB_PORT=$DB_PORT',
+              'export DB_USER=$DB_USER',
+              'export DB_PASSWORD=$DB_PASSWORD',
+              'export DB_NAME=$DB_NAME',
+              'export SQS_QUEUE_URL=$SQS_QUEUE_URL',
+              'export VITE_BACKEND_URL=$VITE_BACKEND_URL',
+              'export NUTRIENT_API_KEY=$NUTRIENT_API_KEY',
+              'export NUTRIENT_BASE_URL=$NUTRIENT_BASE_URL',
+              'export NUTRIENT_SESSION_URL=$NUTRIENT_SESSION_URL',
+              'export NUTRIENT_SIGN_URL=$NUTRIENT_SIGN_URL',
+              'export WORKER_HOST=$WORKER_HOST',
+              'export API_HOST=$API_HOST',
+              'export FRONTEND_S3_BUCKET=$FRONTEND_S3_BUCKET',
               'if [ ! -d /home/ubuntu/pdfconverterpro ]; then git clone https://github.com/darlingtonogbuefi/pdfconverterpro.git /home/ubuntu/pdfconverterpro; fi',
               'cd /home/ubuntu/pdfconverterpro',
               'git config --global --add safe.directory /home/ubuntu/pdfconverterpro || git config --system --add safe.directory /home/ubuntu/pdfconverterpro',
@@ -135,7 +145,6 @@ jobs:
 
           echo "SSM Command ID: $COMMAND_ID"
 
-          # Poll for completion
           while true; do
             STATUS=$(aws ssm list-command-invocations \
               --command-id "$COMMAND_ID" \
@@ -148,7 +157,6 @@ jobs:
             sleep 5
           done
 
-          # Fetch stdout/stderr
           aws ssm get-command-invocation \
             --command-id "$COMMAND_ID" \
             --instance-id "$API_INSTANCE_IDS"
@@ -156,11 +164,25 @@ jobs:
       # ============================
       # Deploy Worker via SSM (clone/update repo + run setup)
       # ============================
-      - name: Deploy Worker via SSM with logs
+      - name: Deploy Worker via SSM with all secrets
         env:
-          FILES_BUCKET: ${{ secrets.JOBS__FILES_S3_BUCKET }}
+          JOBS__FILES_S3_BUCKET: ${{ secrets.JOBS__FILES_S3_BUCKET }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          SQS_QUEUE_URL: ${{ secrets.SQS_QUEUE_URL }}
+          VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL }}
+          NUTRIENT_API_KEY: ${{ secrets.NUTRIENT_API_KEY }}
+          NUTRIENT_BASE_URL: ${{ secrets.NUTRIENT_BASE_URL }}
+          NUTRIENT_SESSION_URL: ${{ secrets.NUTRIENT_SESSION_URL }}
+          NUTRIENT_SIGN_URL: ${{ secrets.NUTRIENT_SIGN_URL }}
+          WORKER_HOST: ${{ secrets.WORKER_HOST }}
+          API_HOST: ${{ secrets.API_HOST }}
+          FRONTEND_S3_BUCKET: ${{ secrets.FRONTEND_S3_BUCKET }}
         run: |
-          echo "DEBUG: Deploying Worker to $WORKER_IDS with bucket $FILES_BUCKET"
+          echo "DEBUG: Deploying Worker to $WORKER_IDS with bucket $JOBS__FILES_S3_BUCKET"
 
           COMMAND_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
@@ -168,7 +190,21 @@ jobs:
             --comment "Deploy Worker from GitHub Actions" \
             --parameters "commands=[
               'export HOME=/home/ubuntu',
-              'export FILES_BUCKET=$FILES_BUCKET',
+              'export JOBS__FILES_S3_BUCKET=$JOBS__FILES_S3_BUCKET',
+              'export DB_HOST=$DB_HOST',
+              'export DB_PORT=$DB_PORT',
+              'export DB_USER=$DB_USER',
+              'export DB_PASSWORD=$DB_PASSWORD',
+              'export DB_NAME=$DB_NAME',
+              'export SQS_QUEUE_URL=$SQS_QUEUE_URL',
+              'export VITE_BACKEND_URL=$VITE_BACKEND_URL',
+              'export NUTRIENT_API_KEY=$NUTRIENT_API_KEY',
+              'export NUTRIENT_BASE_URL=$NUTRIENT_BASE_URL',
+              'export NUTRIENT_SESSION_URL=$NUTRIENT_SESSION_URL',
+              'export NUTRIENT_SIGN_URL=$NUTRIENT_SIGN_URL',
+              'export WORKER_HOST=$WORKER_HOST',
+              'export API_HOST=$API_HOST',
+              'export FRONTEND_S3_BUCKET=$FRONTEND_S3_BUCKET',
               'if [ ! -d /home/ubuntu/pdfconverterpro ]; then git clone https://github.com/darlingtonogbuefi/pdfconverterpro.git /home/ubuntu/pdfconverterpro; fi',
               'cd /home/ubuntu/pdfconverterpro',
               'git config --global --add safe.directory /home/ubuntu/pdfconverterpro || git config --system --add safe.directory /home/ubuntu/pdfconverterpro',
@@ -181,7 +217,6 @@ jobs:
 
           echo "SSM Command ID: $COMMAND_ID"
 
-          # Poll for completion
           while true; do
             STATUS=$(aws ssm list-command-invocations \
               --command-id "$COMMAND_ID" \
@@ -194,7 +229,6 @@ jobs:
             sleep 5
           done
 
-          # Fetch stdout/stderr
           aws ssm get-command-invocation \
             --command-id "$COMMAND_ID" \
             --instance-id "$WORKER_IDS"
