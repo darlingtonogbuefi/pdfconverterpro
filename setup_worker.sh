@@ -1,4 +1,4 @@
-#!/bin/bash    
+#!/bin/bash     
 # setup_worker.sh
 
 set -euo pipefail
@@ -74,13 +74,13 @@ log_step "Configuring log rotation and journal limits"
 sudo mkdir -p /etc/systemd/journald.conf.d
 sudo tee /etc/systemd/journald.conf.d/limits.conf >/dev/null <<EOF
 [Journal]
-SystemMaxUse=200M
-RuntimeMaxUse=100M
+SystemMaxUse=50M
+RuntimeMaxUse=50M
 EOF
 
 sudo systemctl daemon-reexec
 sudo systemctl restart systemd-journald
-log_success "systemd journal limits applied (SystemMaxUse=200M, RuntimeMaxUse=100M)"
+log_success "systemd journal limits applied (SystemMaxUse=50M, RuntimeMaxUse=50M)"
 
 # 2️ Configure logrotate for syslog
 sudo tee /etc/logrotate.d/syslog >/dev/null <<EOF
@@ -103,7 +103,7 @@ sudo logrotate -f /etc/logrotate.d/syslog
 log_success "logrotate configured for /var/log/syslog (max 100MB, 7 rotations)"
 
 # 3️ Cleanup old logs immediately
-sudo journalctl --vacuum-size=200M
+sudo journalctl --vacuum-size=50M
 sudo journalctl --vacuum-time=7d
 sudo rm -f /var/log/*.gz /var/log/*.[0-9] 2>/dev/null || true
 log_success "Old logs cleaned up"
@@ -194,11 +194,14 @@ sudo chown -R $APP_USER:$APP_USER /home/$APP_USER/.cache
 # Activate venv
 source "$VENV_DIR/bin/activate"
 
+# Prevent pip from installing to user site packages
+export PIP_USER=no
+
 # Upgrade pip, wheel, setuptools in the venv as the correct user
-sudo -H -u $APP_USER "$VENV_DIR/bin/pip" install --upgrade pip wheel setuptools
+sudo -H -u $APP_USER "$VENV_DIR/bin/pip" install --upgrade --no-cache-dir pip wheel setuptools
 
 # Install all required Python packages including uvicorn, OpenCV, Camelot
-sudo -H -u $APP_USER "$VENV_DIR/bin/pip" install -r requirements.txt uvicorn opencv-python camelot-py
+sudo -H -u $APP_USER "$VENV_DIR/bin/pip" install --upgrade --no-cache-dir -r requirements.txt uvicorn opencv-python camelot-py
 
 log_success "Python dependencies including camelot and OpenCV installed"
 
