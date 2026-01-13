@@ -1,6 +1,4 @@
-# infra_core/outputs.tf
-
-# infra_core/outputs.tf
+# infra_core_terraform\outputs.tf
 
 # ============================
 # Default SSH users per VM
@@ -23,7 +21,7 @@ output "worker_ssh_user" {
 # ============================
 # Bastion outputs
 # ============================
-output "bastion_public_ip" {
+output "bastion_host_public_ip" {
   value       = aws_instance.bastion.public_ip
   description = "Public IP of the bastion host"
 }
@@ -40,12 +38,12 @@ output "bastion_ssh_command" {
 # ============================
 # API & Worker outputs
 # ============================
-output "api_private_ip" {
+output "api_host_private_ip" {
   value       = aws_instance.api.private_ip
   description = "Private IP of the API EC2 instance"
 }
 
-output "worker_private_ip" {
+output "worker_host_private_ip" {
   value       = aws_instance.worker.private_ip
   description = "Private IP of the worker EC2 instance"
 }
@@ -66,12 +64,12 @@ output "sqs_queue_url" {
   description = "URL of the SQS jobs queue"
 }
 
-output "frontend_bucket_name" {
+output "frontend_s3_bucket_name" {
   description = "The name of the S3 bucket used for hosting the frontend"
   value       = aws_s3_bucket.frontend.bucket
 }
 
-output "files_bucket_name" {
+output "files_s3_bucket_name" {
   description = "The name of the S3 bucket used for storing backend files"
   value       = aws_s3_bucket.files.bucket
 }

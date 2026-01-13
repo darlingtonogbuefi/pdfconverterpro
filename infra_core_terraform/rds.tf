@@ -1,4 +1,4 @@
-# infra_core/rds.tf
+# infra_core_terraform\rds.tf
 
 
 # DB Subnet Group (for private subnets)

@@ -1,6 +1,4 @@
-# infra_core/variables.tf
-
-# infra_core/variables.tf
+# infra_core_terraform\variables.tf
 
 # ============================
 # AWS region
@@ -114,13 +112,13 @@ variable "certificate_arn" {
   default     = "arn:aws:acm:us-east-1:821878754659:certificate/b1bea28d-a671-4cf7-86af-df1c99ccfac8"
 }
 
-variable "frontend_bucket_name" {
+variable "frontend_s3_bucket_name" {
   description = "Name of the frontend S3 bucket"
   type        = string
   default     = "pdfconvertpro-frontend-prod"
 }
 
-variable "files_bucket_name" {
+variable "files_s3_bucket_name" {
   description = "Name of the S3 bucket used for storing backend files"
   type        = string
   default     = "pdfconvertpro-files-prod"

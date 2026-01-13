@@ -1,4 +1,4 @@
-# infra_core/cloudfront.tf
+# infra_core_terraform\cloudfront.tf
 
 # ============================
 # CloudFront OAI for Frontend

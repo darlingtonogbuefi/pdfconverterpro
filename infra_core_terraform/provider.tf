@@ -1,4 +1,4 @@
-# infra_core/provider.tf
+# infra_core_terraform\provider.tf
 
 terraform {
   required_version = ">= 1.6.0"

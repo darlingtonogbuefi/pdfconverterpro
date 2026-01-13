@@ -1,4 +1,4 @@
-# infra_core\ec2.tf
+# infra_core_terraform\ec2.tf
 
 # ============================
 # Amazon Linux AMI (Bastion)

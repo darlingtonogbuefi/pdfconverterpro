@@ -1,4 +1,4 @@
-# infra_core/security.tf
+# infra_core_terraform\security.tf
 
 # -----------------------------
 # Security Group for API EC2 (allow traffic only from ALB and Bastion)

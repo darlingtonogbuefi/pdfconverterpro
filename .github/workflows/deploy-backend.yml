@@ -50,7 +50,7 @@ jobs:
       # ============================
       - name: Terraform Init
         run: |
-          cd infra_core
+          cd infra_core_terraform
           terraform init -input=false
 
       # ============================
@@ -59,7 +59,7 @@ jobs:
       - name: Get API Instance IDs
         id: tf_api
         run: |
-          cd infra_core
+          cd infra_core_terraform     
           echo "DEBUG: Capturing Terraform API output"
 
           TF_API_RAW=$(terraform output -json api_instance_ids 2>/dev/null || true)
@@ -86,7 +86,7 @@ jobs:
       - name: Get Worker Instance IDs
         id: tf_worker
         run: |
-          cd infra_core
+          cd infra_core_terraform
           echo "DEBUG: Capturing Terraform Worker output"
 
           TF_WORKER_RAW=$(terraform output -json worker_instance_ids 2>/dev/null || true)

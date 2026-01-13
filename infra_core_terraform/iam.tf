@@ -1,4 +1,4 @@
-# infra_core/iam.tf
+# infra_core_terraform\iam.tf
 
 # ============================
 # EC2 ROLE (unchanged + SSM)
@@ -115,8 +115,8 @@ resource "aws_iam_role_policy" "github_actions_policy" {
           "s3:ListBucket"
         ]
         Resource = [
-          "arn:aws:s3:::${var.frontend_bucket_name}",
-          "arn:aws:s3:::${var.frontend_bucket_name}/*"
+          "arn:aws:s3:::${var.frontend_s3_bucket_name}",
+          "arn:aws:s3:::${var.frontend_s3_bucket_name}/*"
         ]
       },
       # Terraform remote state: S3 access

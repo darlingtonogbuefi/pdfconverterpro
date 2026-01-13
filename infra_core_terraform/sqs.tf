@@ -1,4 +1,4 @@
-# infra_core/sqs.tf
+# infra_core_terraform\sqs.tf
 
 resource "aws_sqs_queue" "dlq" {
   name = "${var.project_name}-jobs-dlq"

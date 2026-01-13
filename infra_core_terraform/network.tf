@@ -1,4 +1,4 @@
-# infra_core/network.tf
+# infra_core_terraform\network.tf
 
 # ============================
 # VPC

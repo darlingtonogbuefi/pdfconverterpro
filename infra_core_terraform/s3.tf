@@ -1,11 +1,11 @@
-#  infra_core\s3.tf
+# infra_core_terraform\s3.tf
 
 # ============================
 # S3 Bucket for Files
 # ============================
 resource "aws_s3_bucket" "files" {
   bucket        = "${var.project_name}-files-${var.environment}"
-  force_destroy = false
+  force_destroy = true  # Allow deletion even if the bucket is not empty
 }
 
 resource "aws_s3_bucket_versioning" "files" {
@@ -41,7 +41,7 @@ resource "aws_s3_bucket_policy" "files_policy" {
 # ============================
 resource "aws_s3_bucket" "frontend" {
   bucket        = "${var.project_name}-frontend-${var.environment}"
-  force_destroy = false
+  force_destroy = true  # Allow deletion even if the bucket is not empty
 
   tags = {
     Name        = "${var.project_name}-frontend"
@@ -88,4 +88,27 @@ resource "aws_s3_bucket_policy" "frontend_policy" {
       }
     ]
   })
+}
+
+# ============================
+# Null Resource for Cleanup (Before Destroy)
+# ============================
+resource "null_resource" "cleanup" {
+  # Use triggers to safely pass variables to destroy-time provisioner
+  triggers = {
+    project_name = var.project_name
+    environment  = var.environment
+  }
+
+  provisioner "local-exec" {
+    when        = destroy
+    # Reference variables via self.triggers for destroy-time
+    command     = "pwsh ./cleanup.ps1 -ProjectName ${self.triggers.project_name} -Environment ${self.triggers.environment}"
+    interpreter = ["PowerShell", "-Command"]
+  }
+
+  depends_on = [
+    aws_s3_bucket.files,
+    aws_s3_bucket.frontend
+  ]
 }

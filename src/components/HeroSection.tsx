@@ -219,7 +219,7 @@ export function HeroSection({
           <h1 className="text-4xl md:text-5xl font-bold mb-2">PDF ConvertPro</h1>
 
           <p className="text-blue-100 mb-4 max-w-2xl mx-auto">
-            Nkechi Please select a file to edit or convert between supported formats. No signup required.
+            Please select a file to edit or convert between supported formats. No signup required.
           </p>
 
           <div className="bg-white text-gray-900 rounded-2xl shadow-2xl p-4 max-w-6xl mx-auto">

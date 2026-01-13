@@ -1,4 +1,4 @@
-# infra_core\alb.tf
+# infra_core_terraform\alb.tf
 
 # ============================
 # Application Load Balancer (public)
