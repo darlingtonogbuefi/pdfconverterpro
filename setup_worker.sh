@@ -163,6 +163,7 @@ log_step "Writing environment file for systemd"
 if cat > "$ENV_FILE" <<EOF
 # S3 Buckets
 JOBS__FILES_S3_BUCKET=${JOBS__FILES_S3_BUCKET}
+FRONTEND_S3_BUCKET=${FRONTEND_S3_BUCKET}
 
 # Database
 DB_HOST=${DB_HOST}
