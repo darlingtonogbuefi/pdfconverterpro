@@ -2,7 +2,6 @@
 // Update this URL to point to your FastAPI backend
 //  src\config\api.ts
 
-
 export const API_CONFIG = {
   baseUrl: import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000' ,
   endpoints: {
