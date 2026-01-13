@@ -143,13 +143,11 @@ sudo chown -R $APP_USER:$APP_USER /home/$APP_USER/.cache
 # Activate venv
 source "$VENV_DIR/bin/activate"
 
-# Upgrade pip and install requirements as correct user
-sudo -H -u $APP_USER HOME=/home/$APP_USER pip install --upgrade pip
-sudo -H -u $APP_USER HOME=/home/$APP_USER pip install -r requirements.txt
+# Upgrade pip, wheel, setuptools in the venv as the correct user
+sudo -H -u $APP_USER "$VENV_DIR/bin/pip" install --upgrade pip wheel setuptools
 
-# Install OpenCV explicitly for Camelot
-sudo -H -u $APP_USER HOME=/home/$APP_USER pip install opencv-python
-sudo -H -u $APP_USER HOME=/home/$APP_USER pip install camelot-py
+# Install all required Python packages including uvicorn, OpenCV, Camelot
+sudo -H -u $APP_USER "$VENV_DIR/bin/pip" install -r requirements.txt uvicorn opencv-python camelot-py
 
 log_success "Python dependencies including camelot and OpenCV installed"
 
