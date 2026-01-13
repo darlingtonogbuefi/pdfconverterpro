@@ -1,4 +1,4 @@
-#   .github/workflows/deploy-backend.yml 
+# .github/workflows/deploy-backend.yml
 
 name: Deploy Backend & Worker to EC2 (SSM + OIDC)
 
@@ -117,28 +117,28 @@ jobs:
             --instance-ids $API_INSTANCE_IDS \
             --comment "Deploy API from GitHub Actions" \
             --parameters "commands=[
-              'export HOME=/home/ubuntu',
-              'export JOBS__FILES_S3_BUCKET=$JOBS__FILES_S3_BUCKET',
-              'export DB_HOST=$DB_HOST',
-              'export DB_PORT=$DB_PORT',
-              'export DB_USER=$DB_USER',
-              'export DB_PASSWORD=$DB_PASSWORD',
-              'export DB_NAME=$DB_NAME',
-              'export SQS_QUEUE_URL=$SQS_QUEUE_URL',
-              'export VITE_BACKEND_URL=$VITE_BACKEND_URL',
-              'export NUTRIENT_API_KEY=$NUTRIENT_API_KEY',
-              'export NUTRIENT_BASE_URL=$NUTRIENT_BASE_URL',
-              'export NUTRIENT_SESSION_URL=$NUTRIENT_SESSION_URL',
-              'export NUTRIENT_SIGN_URL=$NUTRIENT_SIGN_URL',
-              'export WORKER_HOST=$WORKER_HOST',
-              'export API_HOST=$API_HOST',
-              'export FRONTEND_S3_BUCKET=$FRONTEND_S3_BUCKET',
-              'if [ ! -d /home/ubuntu/pdfconverterpro ]; then git clone https://github.com/darlingtonogbuefi/pdfconverterpro.git /home/ubuntu/pdfconverterpro; fi',
-              'cd /home/ubuntu/pdfconverterpro',
-              'git config --global --add safe.directory /home/ubuntu/pdfconverterpro || git config --system --add safe.directory /home/ubuntu/pdfconverterpro',
-              'git fetch origin',
-              'git reset --hard origin/main',
-              'if [ -f setup_api.sh ]; then chmod +x setup_api.sh; bash setup_api.sh; fi'
+              \"export HOME=/home/ubuntu\",
+              \"export JOBS__FILES_S3_BUCKET=${JOBS__FILES_S3_BUCKET}\",
+              \"export DB_HOST=${DB_HOST}\",
+              \"export DB_PORT=${DB_PORT}\",
+              \"export DB_USER=${DB_USER}\",
+              \"export DB_PASSWORD=${DB_PASSWORD}\",
+              \"export DB_NAME=${DB_NAME}\",
+              \"export SQS_QUEUE_URL=${SQS_QUEUE_URL}\",
+              \"export VITE_BACKEND_URL=${VITE_BACKEND_URL}\",
+              \"export NUTRIENT_API_KEY=${NUTRIENT_API_KEY}\",
+              \"export NUTRIENT_BASE_URL=${NUTRIENT_BASE_URL}\",
+              \"export NUTRIENT_SESSION_URL=${NUTRIENT_SESSION_URL}\",
+              \"export NUTRIENT_SIGN_URL=${NUTRIENT_SIGN_URL}\",
+              \"export WORKER_HOST=${WORKER_HOST}\",
+              \"export API_HOST=${API_HOST}\",
+              \"export FRONTEND_S3_BUCKET=${FRONTEND_S3_BUCKET}\",
+              \"if [ ! -d /home/ubuntu/pdfconverterpro ]; then git clone https://github.com/darlingtonogbuefi/pdfconverterpro.git /home/ubuntu/pdfconverterpro; fi\",
+              \"cd /home/ubuntu/pdfconverterpro\",
+              \"git config --global --add safe.directory /home/ubuntu/pdfconverterpro || git config --system --add safe.directory /home/ubuntu/pdfconverterpro\",
+              \"git fetch origin\",
+              \"git reset --hard origin/main\",
+              \"if [ -f setup_api.sh ]; then chmod +x setup_api.sh; bash setup_api.sh; fi\"
             ]" \
             --timeout-seconds 3600 \
             --query "Command.CommandId" --output text)
@@ -189,28 +189,28 @@ jobs:
             --instance-ids $WORKER_IDS \
             --comment "Deploy Worker from GitHub Actions" \
             --parameters "commands=[
-              'export HOME=/home/ubuntu',
-              'export JOBS__FILES_S3_BUCKET=$JOBS__FILES_S3_BUCKET',
-              'export DB_HOST=$DB_HOST',
-              'export DB_PORT=$DB_PORT',
-              'export DB_USER=$DB_USER',
-              'export DB_PASSWORD=$DB_PASSWORD',
-              'export DB_NAME=$DB_NAME',
-              'export SQS_QUEUE_URL=$SQS_QUEUE_URL',
-              'export VITE_BACKEND_URL=$VITE_BACKEND_URL',
-              'export NUTRIENT_API_KEY=$NUTRIENT_API_KEY',
-              'export NUTRIENT_BASE_URL=$NUTRIENT_BASE_URL',
-              'export NUTRIENT_SESSION_URL=$NUTRIENT_SESSION_URL',
-              'export NUTRIENT_SIGN_URL=$NUTRIENT_SIGN_URL',
-              'export WORKER_HOST=$WORKER_HOST',
-              'export API_HOST=$API_HOST',
-              'export FRONTEND_S3_BUCKET=$FRONTEND_S3_BUCKET',
-              'if [ ! -d /home/ubuntu/pdfconverterpro ]; then git clone https://github.com/darlingtonogbuefi/pdfconverterpro.git /home/ubuntu/pdfconverterpro; fi',
-              'cd /home/ubuntu/pdfconverterpro',
-              'git config --global --add safe.directory /home/ubuntu/pdfconverterpro || git config --system --add safe.directory /home/ubuntu/pdfconverterpro',
-              'git fetch origin',
-              'git reset --hard origin/main',
-              'if [ -f setup_worker.sh ]; then chmod +x setup_worker.sh; bash setup_worker.sh; fi'
+              \"export HOME=/home/ubuntu\",
+              \"export JOBS__FILES_S3_BUCKET=${JOBS__FILES_S3_BUCKET}\",
+              \"export DB_HOST=${DB_HOST}\",
+              \"export DB_PORT=${DB_PORT}\",
+              \"export DB_USER=${DB_USER}\",
+              \"export DB_PASSWORD=${DB_PASSWORD}\",
+              \"export DB_NAME=${DB_NAME}\",
+              \"export SQS_QUEUE_URL=${SQS_QUEUE_URL}\",
+              \"export VITE_BACKEND_URL=${VITE_BACKEND_URL}\",
+              \"export NUTRIENT_API_KEY=${NUTRIENT_API_KEY}\",
+              \"export NUTRIENT_BASE_URL=${NUTRIENT_BASE_URL}\",
+              \"export NUTRIENT_SESSION_URL=${NUTRIENT_SESSION_URL}\",
+              \"export NUTRIENT_SIGN_URL=${NUTRIENT_SIGN_URL}\",
+              \"export WORKER_HOST=${WORKER_HOST}\",
+              \"export API_HOST=${API_HOST}\",
+              \"export FRONTEND_S3_BUCKET=${FRONTEND_S3_BUCKET}\",
+              \"if [ ! -d /home/ubuntu/pdfconverterpro ]; then git clone https://github.com/darlingtonogbuefi/pdfconverterpro.git /home/ubuntu/pdfconverterpro; fi\",
+              \"cd /home/ubuntu/pdfconverterpro\",
+              \"git config --global --add safe.directory /home/ubuntu/pdfconverterpro || git config --system --add safe.directory /home/ubuntu/pdfconverterpro\",
+              \"git fetch origin\",
+              \"git reset --hard origin/main\",
+              \"if [ -f setup_worker.sh ]; then chmod +x setup_worker.sh; bash setup_worker.sh; fi\"
             ]" \
             --timeout-seconds 3600 \
             --query "Command.CommandId" --output text)
