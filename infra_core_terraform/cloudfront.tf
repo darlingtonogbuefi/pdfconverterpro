@@ -40,7 +40,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   # ALB / API Origin
   # ============================
   origin {
-    domain_name = "pdfconvertpro-alb-296469480.us-east-1.elb.amazonaws.com"
+    domain_name = var.alb_domain_name
     origin_id   = "ALB-Backend"
 
     # IMPORTANT:

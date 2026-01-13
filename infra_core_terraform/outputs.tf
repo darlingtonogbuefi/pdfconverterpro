@@ -160,3 +160,8 @@ output "worker_instance_ids" {
   description = "The EC2 instance IDs for Worker servers"
   value       = [aws_instance.worker.id]
 }
+
+output "fqdn" {
+  description = "Fully qualified domain name of the delegated subdomain pointing to CloudFront"
+  value       = var.subdomain_zone_name
+}
