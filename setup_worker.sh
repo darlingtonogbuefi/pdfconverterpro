@@ -1,4 +1,4 @@
-#!/bin/bash    
+#!/bin/bash   
 # setup_worker.sh
 
 set -euo pipefail
@@ -28,37 +28,18 @@ log_error() {
 }
 
 # -----------------------------------
-# Safe defaults for all environment variables
+# REQUIRED ENV VARS
 # -----------------------------------
-# S3 Buckets / AWS
-JOBS__FILES_S3_BUCKET="${JOBS__FILES_S3_BUCKET:-pdfconvertpro-files-prod}"
-FRONTEND_S3_BUCKET="${FRONTEND_S3_BUCKET:-pdfconvertpro-frontend-prod}"
+log_step "Checking required environment variables"
+if [ -z "${JOBS__FILES_S3_BUCKET:-}" ]; then
+    log_error "JOBS__FILES_S3_BUCKET environment variable is not set"
+    echo "Example: export JOBS__FILES_S3_BUCKET=pdfconvertpro-files-prod"
+    exit 1
+fi
+
 AWS_REGION="${AWS_REGION:-us-east-1}"
 
-# Database
-DB_HOST="${DB_HOST:-}"
-DB_PORT="${DB_PORT:-}"
-DB_USER="${DB_USER:-}"
-DB_PASSWORD="${DB_PASSWORD:-}"
-DB_NAME="${DB_NAME:-}"
-
-# SQS
-SQS_QUEUE_URL="${SQS_QUEUE_URL:-}"
-
-# Backend / Worker
-WORKER_HOST="${WORKER_HOST:-}"
-API_HOST="${API_HOST:-}"
-VITE_BACKEND_URL="${VITE_BACKEND_URL:-}"
-
-# Nutrient API
-NUTRIENT_API_KEY="${NUTRIENT_API_KEY:-}"
-NUTRIENT_BASE_URL="${NUTRIENT_BASE_URL:-}"
-NUTRIENT_SESSION_URL="${NUTRIENT_SESSION_URL:-}"
-NUTRIENT_SIGN_URL="${NUTRIENT_SIGN_URL:-}"
-
-log_step "Using environment variables"
 echo "JOBS__FILES_S3_BUCKET=$JOBS__FILES_S3_BUCKET"
-echo "FRONTEND_S3_BUCKET=$FRONTEND_S3_BUCKET"
 echo "AWS_REGION=$AWS_REGION"
 
 # -----------------------------------
@@ -114,9 +95,12 @@ fi
 # -----------------------------------
 log_step "Cloning or updating repository"
 
+# Step 0: Fix Git folder permissions if repo exists
 if [ -d "$APP_DIR" ]; then
     sudo chown -R $APP_USER:$APP_USER "$APP_DIR/.git"
     sudo chmod -R u+rwX "$APP_DIR/.git"
+
+    # Ensure entire app directory is owned by the app user
     sudo chown -R $APP_USER:$APP_USER "$APP_DIR"
 fi
 
@@ -155,12 +139,17 @@ if [ ! -d "$VENV_DIR" ]; then
     fi
 fi
 
+# Fix pip cache permissions
 sudo -u $APP_USER mkdir -p /home/$APP_USER/.cache/pip
 sudo chown -R $APP_USER:$APP_USER /home/$APP_USER/.cache
 
+# Activate venv
 source "$VENV_DIR/bin/activate"
 
+# Upgrade pip, wheel, setuptools in the venv as the correct user
 sudo -H -u $APP_USER "$VENV_DIR/bin/pip" install --upgrade pip wheel setuptools
+
+# Install all required Python packages including uvicorn, OpenCV, Camelot
 sudo -H -u $APP_USER "$VENV_DIR/bin/pip" install -r requirements.txt uvicorn opencv-python camelot-py
 
 log_success "Python dependencies including camelot and OpenCV installed"
@@ -168,40 +157,41 @@ log_success "Python dependencies including camelot and OpenCV installed"
 deactivate
 
 # -----------------------------------
-# Environment file for systemd (overwrite with new vars)
+# Environment file for systemd (SSM secrets only)
 # -----------------------------------
 log_step "Writing environment file for systemd"
-
-cat > "$ENV_FILE" <<EOF
+if cat > "$ENV_FILE" <<EOF
 # S3 Buckets
-JOBS__FILES_S3_BUCKET=$JOBS__FILES_S3_BUCKET
-FRONTEND_S3_BUCKET=$FRONTEND_S3_BUCKET
-AWS_REGION=$AWS_REGION
+JOBS__FILES_S3_BUCKET=${JOBS__FILES_S3_BUCKET}
 
 # Database
-DB_HOST=$DB_HOST
-DB_PORT=$DB_PORT
-DB_USER=$DB_USER
-DB_PASSWORD=$DB_PASSWORD
-DB_NAME=$DB_NAME
+DB_HOST=${DB_HOST}
+DB_PORT=${DB_PORT}
+DB_USER=${DB_USER}
+DB_PASSWORD=${DB_PASSWORD}
+DB_NAME=${DB_NAME}
 
 # SQS
-SQS_QUEUE_URL=$SQS_QUEUE_URL
+SQS_QUEUE_URL=${SQS_QUEUE_URL}
 
 # Backend / Worker
-WORKER_HOST=$WORKER_HOST
-API_HOST=$API_HOST
-VITE_BACKEND_URL=$VITE_BACKEND_URL
+WORKER_HOST=${WORKER_HOST}
+API_HOST=${API_HOST}
+VITE_BACKEND_URL=${VITE_BACKEND_URL}
 
 # Nutrient API
-NUTRIENT_API_KEY=$NUTRIENT_API_KEY
-NUTRIENT_BASE_URL=$NUTRIENT_BASE_URL
-NUTRIENT_SESSION_URL=$NUTRIENT_SESSION_URL
-NUTRIENT_SIGN_URL=$NUTRIENT_SIGN_URL
+NUTRIENT_API_KEY=${NUTRIENT_API_KEY}
+NUTRIENT_BASE_URL=${NUTRIENT_BASE_URL}
+NUTRIENT_SESSION_URL=${NUTRIENT_SESSION_URL}
+NUTRIENT_SIGN_URL=${NUTRIENT_SIGN_URL}
 EOF
-
-chmod 600 "$ENV_FILE"
-log_success "Environment file overwritten at $ENV_FILE"
+then
+    chmod 600 "$ENV_FILE"
+    log_success "Environment file created at $ENV_FILE with SSM secrets only"
+else
+    log_error "Failed to create environment file"
+    exit 1
+fi
 
 # -----------------------------------
 # Create systemd service for Worker
@@ -209,7 +199,7 @@ log_success "Environment file overwritten at $ENV_FILE"
 log_step "Creating systemd service for Worker"
 SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
 
-cat > "$SERVICE_FILE" <<EOF
+if cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=PDF Converter Pro Worker
 After=network-online.target
@@ -229,9 +219,12 @@ EnvironmentFile=$ENV_FILE
 [Install]
 WantedBy=multi-user.target
 EOF
-
-chmod 644 "$SERVICE_FILE"
-log_success "Systemd service file created at $SERVICE_FILE"
+then
+    log_success "Systemd service file created at $SERVICE_FILE"
+else
+    log_error "Failed to create systemd service file"
+    exit 1
+fi
 
 # -----------------------------------
 # Enable & start service
@@ -277,5 +270,3 @@ fi
 
 log_step "Worker setup complete and running"
 echo "JOBS__FILES_S3_BUCKET=$JOBS__FILES_S3_BUCKET"
-echo "FRONTEND_S3_BUCKET=$FRONTEND_S3_BUCKET"
-echo "AWS_REGION=$AWS_REGION"
