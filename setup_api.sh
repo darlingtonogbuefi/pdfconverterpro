@@ -1,4 +1,4 @@
-#!/bin/bash   
+#!/bin/bash    
 # setup_api.sh
 
 set -euo pipefail
@@ -31,15 +31,14 @@ log_error() {
 # REQUIRED ENV VARS
 # -----------------------------------
 log_step "Checking required environment variables"
-if [ -z "${JOBS__FILES_S3_BUCKET:-}" ]; then
-    log_error "JOBS__FILES_S3_BUCKET environment variable is not set"
-    echo "Example: export JOBS__FILES_S3_BUCKET=pdfconvertpro-files-prod"
-    exit 1
-fi
 
+# Safe default if JOBS__FILES_S3_BUCKET is not set
+FILES_BUCKET="${JOBS__FILES_S3_BUCKET:-pdfconvertpro-files-prod}"
+FRONTEND_BUCKET="${FRONTEND_S3_BUCKET:-pdfconvertpro-frontend-prod}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
 
-echo "JOBS__FILES_S3_BUCKET=$JOBS__FILES_S3_BUCKET"
+echo "JOBS__FILES_S3_BUCKET=$FILES_BUCKET"
+echo "FRONTEND_S3_BUCKET=$FRONTEND_BUCKET"
 echo "AWS_REGION=$AWS_REGION"
 
 # -----------------------------------
@@ -92,12 +91,9 @@ fi
 # -----------------------------------
 log_step "Cloning or updating repository"
 
-# Step 0: Fix Git folder permissions if it exists
 if [ -d "$APP_DIR" ]; then
     sudo chown -R $APP_USER:$APP_USER "$APP_DIR/.git"
     sudo chmod -R u+rwX "$APP_DIR/.git"
-
-    # Ensure entire app directory is owned by the app user
     sudo chown -R $APP_USER:$APP_USER "$APP_DIR"
 fi
 
@@ -136,17 +132,12 @@ if [ ! -d "$VENV_DIR" ]; then
     fi
 fi
 
-# Fix pip cache permissions
 sudo -u $APP_USER mkdir -p /home/$APP_USER/.cache/pip
 sudo chown -R $APP_USER:$APP_USER /home/$APP_USER/.cache
 
-# Activate venv
 source "$VENV_DIR/bin/activate"
 
-# Upgrade pip, wheel, setuptools in the venv as the correct user
 sudo -H -u $APP_USER "$VENV_DIR/bin/pip" install --upgrade pip wheel setuptools
-
-# Install all required Python packages including uvicorn, OpenCV, Camelot
 sudo -H -u $APP_USER "$VENV_DIR/bin/pip" install -r requirements.txt uvicorn opencv-python camelot-py
 
 log_success "Python dependencies including camelot and OpenCV installed"
@@ -154,42 +145,55 @@ log_success "Python dependencies including camelot and OpenCV installed"
 deactivate
 
 # -----------------------------------
-# Environment file for systemd (SSM secrets only)
+# Environment file for systemd (overwrite with new vars)
 # -----------------------------------
 log_step "Writing environment file for systemd"
-if cat > "$ENV_FILE" <<EOF
+
+# Safe defaults for all other variables
+DB_HOST="${DB_HOST:-}"
+DB_PORT="${DB_PORT:-}"
+DB_USER="${DB_USER:-}"
+DB_PASSWORD="${DB_PASSWORD:-}"
+DB_NAME="${DB_NAME:-}"
+SQS_QUEUE_URL="${SQS_QUEUE_URL:-}"
+WORKER_HOST="${WORKER_HOST:-}"
+API_HOST="${API_HOST:-}"
+VITE_BACKEND_URL="${VITE_BACKEND_URL:-}"
+NUTRIENT_API_KEY="${NUTRIENT_API_KEY:-}"
+NUTRIENT_BASE_URL="${NUTRIENT_BASE_URL:-}"
+NUTRIENT_SESSION_URL="${NUTRIENT_SESSION_URL:-}"
+NUTRIENT_SIGN_URL="${NUTRIENT_SIGN_URL:-}"
+
+cat > "$ENV_FILE" <<EOF
 # S3 Buckets
-JOBS__FILES_S3_BUCKET=${JOBS__FILES_S3_BUCKET}
-FRONTEND_S3_BUCKET=${FRONTEND_S3_BUCKET}
+JOBS__FILES_S3_BUCKET=$FILES_BUCKET
+FRONTEND_S3_BUCKET=$FRONTEND_BUCKET
+AWS_REGION=$AWS_REGION
 
 # Database
-DB_HOST=${DB_HOST}
-DB_PORT=${DB_PORT}
-DB_USER=${DB_USER}
-DB_PASSWORD=${DB_PASSWORD}
-DB_NAME=${DB_NAME}
+DB_HOST=$DB_HOST
+DB_PORT=$DB_PORT
+DB_USER=$DB_USER
+DB_PASSWORD=$DB_PASSWORD
+DB_NAME=$DB_NAME
 
 # SQS
-SQS_QUEUE_URL=${SQS_QUEUE_URL}
+SQS_QUEUE_URL=$SQS_QUEUE_URL
 
 # Backend / Worker
-WORKER_HOST=${WORKER_HOST}
-API_HOST=${API_HOST}
-VITE_BACKEND_URL=${VITE_BACKEND_URL}
+WORKER_HOST=$WORKER_HOST
+API_HOST=$API_HOST
+VITE_BACKEND_URL=$VITE_BACKEND_URL
 
 # Nutrient API
-NUTRIENT_API_KEY=${NUTRIENT_API_KEY}
-NUTRIENT_BASE_URL=${NUTRIENT_BASE_URL}
-NUTRIENT_SESSION_URL=${NUTRIENT_SESSION_URL}
-NUTRIENT_SIGN_URL=${NUTRIENT_SIGN_URL}
+NUTRIENT_API_KEY=$NUTRIENT_API_KEY
+NUTRIENT_BASE_URL=$NUTRIENT_BASE_URL
+NUTRIENT_SESSION_URL=$NUTRIENT_SESSION_URL
+NUTRIENT_SIGN_URL=$NUTRIENT_SIGN_URL
 EOF
-then
-    chmod 600 "$ENV_FILE"
-    log_success "Environment file created at $ENV_FILE with SSM secrets only"
-else
-    log_error "Failed to create environment file"
-    exit 1
-fi
+
+chmod 600 "$ENV_FILE"
+log_success "Environment file overwritten at $ENV_FILE"
 
 # -----------------------------------
 # Create systemd service for API
@@ -197,7 +201,7 @@ fi
 log_step "Creating systemd service for API"
 SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
 
-if cat > "$SERVICE_FILE" <<EOF
+cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=PDF Converter Pro API
 After=network-online.target
@@ -217,12 +221,9 @@ EnvironmentFile=$ENV_FILE
 [Install]
 WantedBy=multi-user.target
 EOF
-then
-    log_success "Systemd service file created at $SERVICE_FILE"
-else
-    log_error "Failed to create systemd service file"
-    exit 1
-fi
+
+chmod 644 "$SERVICE_FILE"
+log_success "Systemd service file created at $SERVICE_FILE"
 
 # -----------------------------------
 # Enable & start service
@@ -267,4 +268,5 @@ else
 fi
 
 log_step "API setup complete and running"
-echo "JOBS__FILES_S3_BUCKET=$JOBS__FILES_S3_BUCKET"
+echo "JOBS__FILES_S3_BUCKET=$FILES_BUCKET"
+echo "FRONTEND_S3_BUCKET=$FRONTEND_BUCKET"
