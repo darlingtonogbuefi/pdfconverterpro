@@ -1,4 +1,4 @@
-#!/bin/bash    
+#!/bin/bash     
 # setup_api.sh
 
 set -euo pipefail
@@ -28,17 +28,37 @@ log_error() {
 }
 
 # -----------------------------------
-# REQUIRED ENV VARS
+# Safe defaults for all environment variables
 # -----------------------------------
-log_step "Checking required environment variables"
-
-# Safe default if JOBS__FILES_S3_BUCKET is not set
-FILES_BUCKET="${JOBS__FILES_S3_BUCKET:-pdfconvertpro-files-prod}"
-FRONTEND_BUCKET="${FRONTEND_S3_BUCKET:-pdfconvertpro-frontend-prod}"
+# S3 Buckets / AWS
+JOBS__FILES_S3_BUCKET="${JOBS__FILES_S3_BUCKET:-pdfconvertpro-files-prod}"
+FRONTEND_S3_BUCKET="${FRONTEND_S3_BUCKET:-pdfconvertpro-frontend-prod}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
 
-echo "JOBS__FILES_S3_BUCKET=$FILES_BUCKET"
-echo "FRONTEND_S3_BUCKET=$FRONTEND_BUCKET"
+# Database
+DB_HOST="${DB_HOST:-}"
+DB_PORT="${DB_PORT:-}"
+DB_USER="${DB_USER:-}"
+DB_PASSWORD="${DB_PASSWORD:-}"
+DB_NAME="${DB_NAME:-}"
+
+# SQS
+SQS_QUEUE_URL="${SQS_QUEUE_URL:-}"
+
+# Backend / Worker
+WORKER_HOST="${WORKER_HOST:-}"
+API_HOST="${API_HOST:-}"
+VITE_BACKEND_URL="${VITE_BACKEND_URL:-}"
+
+# Nutrient API
+NUTRIENT_API_KEY="${NUTRIENT_API_KEY:-}"
+NUTRIENT_BASE_URL="${NUTRIENT_BASE_URL:-}"
+NUTRIENT_SESSION_URL="${NUTRIENT_SESSION_URL:-}"
+NUTRIENT_SIGN_URL="${NUTRIENT_SIGN_URL:-}"
+
+log_step "Using environment variables"
+echo "JOBS__FILES_S3_BUCKET=$JOBS__FILES_S3_BUCKET"
+echo "FRONTEND_S3_BUCKET=$FRONTEND_S3_BUCKET"
 echo "AWS_REGION=$AWS_REGION"
 
 # -----------------------------------
@@ -149,25 +169,10 @@ deactivate
 # -----------------------------------
 log_step "Writing environment file for systemd"
 
-# Safe defaults for all other variables
-DB_HOST="${DB_HOST:-}"
-DB_PORT="${DB_PORT:-}"
-DB_USER="${DB_USER:-}"
-DB_PASSWORD="${DB_PASSWORD:-}"
-DB_NAME="${DB_NAME:-}"
-SQS_QUEUE_URL="${SQS_QUEUE_URL:-}"
-WORKER_HOST="${WORKER_HOST:-}"
-API_HOST="${API_HOST:-}"
-VITE_BACKEND_URL="${VITE_BACKEND_URL:-}"
-NUTRIENT_API_KEY="${NUTRIENT_API_KEY:-}"
-NUTRIENT_BASE_URL="${NUTRIENT_BASE_URL:-}"
-NUTRIENT_SESSION_URL="${NUTRIENT_SESSION_URL:-}"
-NUTRIENT_SIGN_URL="${NUTRIENT_SIGN_URL:-}"
-
 cat > "$ENV_FILE" <<EOF
 # S3 Buckets
-JOBS__FILES_S3_BUCKET=$FILES_BUCKET
-FRONTEND_S3_BUCKET=$FRONTEND_BUCKET
+JOBS__FILES_S3_BUCKET=$JOBS__FILES_S3_BUCKET
+FRONTEND_S3_BUCKET=$FRONTEND_S3_BUCKET
 AWS_REGION=$AWS_REGION
 
 # Database
@@ -268,5 +273,5 @@ else
 fi
 
 log_step "API setup complete and running"
-echo "JOBS__FILES_S3_BUCKET=$FILES_BUCKET"
-echo "FRONTEND_S3_BUCKET=$FRONTEND_BUCKET"
+echo "JOBS__FILES_S3_BUCKET=$JOBS__FILES_S3_BUCKET"
+echo "FRONTEND_S3_BUCKET=$FRONTEND_S3_BUCKET"
