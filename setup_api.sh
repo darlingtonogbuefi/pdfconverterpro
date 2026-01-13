@@ -1,4 +1,4 @@
-#!/bin/bash  
+#!/bin/bash   
 # setup_api.sh
 
 set -euo pipefail
@@ -154,16 +154,38 @@ log_success "Python dependencies including camelot and OpenCV installed"
 deactivate
 
 # -----------------------------------
-# Environment file for systemd
+# Environment file for systemd (SSM secrets only)
 # -----------------------------------
 log_step "Writing environment file for systemd"
 if cat > "$ENV_FILE" <<EOF
-JOBS__FILES_S3_BUCKET=$JOBS__FILES_S3_BUCKET
-AWS_REGION=$AWS_REGION
+# S3 Buckets
+JOBS__FILES_S3_BUCKET=${JOBS__FILES_S3_BUCKET}
+FRONTEND_S3_BUCKET=${FRONTEND_S3_BUCKET}
+
+# Database
+DB_HOST=${DB_HOST}
+DB_PORT=${DB_PORT}
+DB_USER=${DB_USER}
+DB_PASSWORD=${DB_PASSWORD}
+DB_NAME=${DB_NAME}
+
+# SQS
+SQS_QUEUE_URL=${SQS_QUEUE_URL}
+
+# Backend / Worker
+WORKER_HOST=${WORKER_HOST}
+API_HOST=${API_HOST}
+VITE_BACKEND_URL=${VITE_BACKEND_URL}
+
+# Nutrient API
+NUTRIENT_API_KEY=${NUTRIENT_API_KEY}
+NUTRIENT_BASE_URL=${NUTRIENT_BASE_URL}
+NUTRIENT_SESSION_URL=${NUTRIENT_SESSION_URL}
+NUTRIENT_SIGN_URL=${NUTRIENT_SIGN_URL}
 EOF
 then
     chmod 600 "$ENV_FILE"
-    log_success "Environment file created at $ENV_FILE"
+    log_success "Environment file created at $ENV_FILE with SSM secrets only"
 else
     log_error "Failed to create environment file"
     exit 1
