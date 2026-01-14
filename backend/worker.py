@@ -7,8 +7,8 @@ from backend.services.pdf_to_powerpoint import convert_pdf_to_ppt
 from backend.utils.s3_utils import download_file, upload_file_to_s3
 from backend.core.config import AWS_REGION, SQS_QUEUE_URL, FRONTEND_SQS_QUEUE_URL
 import os
-import tempfile
 import time
+import shutil
 
 # --------------------------
 # SETUP FULL LOGGING
@@ -64,9 +64,16 @@ while True:
         logger.info(f"Processing job {job_id} for file {input_s3_key}")
 
         input_path = None
+        job_dir = None
         output_path = None
 
         try:
+            # --------------------------
+            # CREATE JOB TEMP DIRECTORY
+            # --------------------------
+            job_dir = f"/tmp/jobs/{job_id}"
+            os.makedirs(job_dir, exist_ok=True)
+
             # --------------------------
             # DOWNLOAD PDF
             # --------------------------
@@ -74,17 +81,29 @@ while True:
             logger.debug(f"Downloaded PDF to {input_path}")
 
             # --------------------------
-            # CREATE TEMP OUTPUT FILE
+            # DEFINE OUTPUT FILE PATH
             # --------------------------
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pptx") as tmp_out:
-                output_path = tmp_out.name
-            logger.debug(f"Temporary output file: {output_path}")
+            output_path = os.path.join(job_dir, "result.pptx")
+            logger.debug(f"Job output file: {output_path}")
 
             # --------------------------
             # CONVERT PDF TO PPT
             # --------------------------
             original_name = os.path.basename(input_s3_key)
             convert_pdf_to_ppt(input_path, output_path, original_name)
+
+            # --------------------------
+            # VALIDATE OUTPUT FILE
+            # --------------------------
+            if not os.path.exists(output_path):
+                raise RuntimeError("PPTX file was not created")
+
+            pptx_size = os.path.getsize(output_path)
+            logger.info(f"PPTX size before upload: {pptx_size} bytes")
+
+            if pptx_size == 0:
+                raise RuntimeError("PPTX file is empty")
+
             logger.info(f"Conversion successful for job {job_id}")
 
             # --------------------------
@@ -92,7 +111,10 @@ while True:
             # --------------------------
             s3_key = f"outputs/{job_id}/result.pptx"
             upload_file_to_s3(output_path, s3_key)
-            logger.info(f"Uploaded converted PPTX for job {job_id} to s3://{JOBS__FILES_S3_BUCKET}/{s3_key}")
+            logger.info(
+                f"Uploaded converted PPTX for job {job_id} "
+                f"to s3://{JOBS__FILES_S3_BUCKET}/{s3_key}"
+            )
 
             # --------------------------
             # GENERATE PRESIGNED URL
@@ -117,7 +139,10 @@ while True:
                     QueueUrl=FRONTEND_SQS_QUEUE_URL,
                     MessageBody=json.dumps(job_status)
                 )
-                logger.debug(f"Sent job status with presigned URL for job {job_id} to frontend SQS")
+                logger.debug(
+                    f"Sent job status with presigned URL "
+                    f"for job {job_id} to frontend SQS"
+                )
 
         except Exception as e:
             logger.exception(f"Conversion failed for job {job_id}: {e}")
@@ -126,10 +151,17 @@ while True:
             # --------------------------
             # CLEANUP TEMP FILES
             # --------------------------
-            if input_path and os.path.exists(input_path):
-                os.remove(input_path)
-            if output_path and os.path.exists(output_path):
-                os.remove(output_path)
+            try:
+                if input_path and os.path.exists(input_path):
+                    os.remove(input_path)
+
+                if job_dir and os.path.exists(job_dir):
+                    shutil.rmtree(job_dir)
+
+            except Exception as cleanup_err:
+                logger.warning(
+                    f"Cleanup failed for job {job_id}: {cleanup_err}"
+                )
 
         # --------------------------
         # DELETE MESSAGE FROM SQS
@@ -141,7 +173,9 @@ while True:
             )
             logger.debug(f"Deleted message for job {job_id} from SQS")
         except Exception as e:
-            logger.exception(f"Failed to delete SQS message for job {job_id}: {e}")
+            logger.exception(
+                f"Failed to delete SQS message for job {job_id}: {e}"
+            )
 
     except Exception as e:
         logger.exception(f"Worker loop exception: {e}")
