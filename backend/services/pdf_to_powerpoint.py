@@ -126,7 +126,7 @@ class Converter:
 # PDF -> PPTX service function
 # ------------------------------
 
-def convert_pdf_to_ppt(pdf_path: str, out_path: str, original_name: str,
+def convert_pdf_to_powerpoint(pdf_path: str, out_path: str, original_name: str,
                        enable_ocr: bool = False, default_font: str = "Arial"):
     try:
         # Set enable_ocr to False by default to disable OCR unless explicitly enabled
