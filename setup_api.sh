@@ -66,14 +66,14 @@ log_success "System packages installed"
 # -----------------------------------
 log_step "Configuring log rotation and journal limits"
 
-# 🔒 FIX LOG DIRECTORY PERMISSIONS (DEFENSIVE)
+# FIX LOG DIRECTORY PERMISSIONS (DEFENSIVE)
 sudo chown root:root /var/log
 sudo chmod 755 /var/log
 
 sudo chown root:adm /var/log/syslog || true
 sudo chmod 640 /var/log/syslog || true
 
-# 1️⃣ Limit systemd journal size
+# 1️Limit systemd journal size
 sudo mkdir -p /etc/systemd/journald.conf.d
 sudo tee /etc/systemd/journald.conf.d/limits.conf >/dev/null <<EOF
 [Journal]
@@ -85,7 +85,7 @@ sudo systemctl daemon-reexec
 sudo systemctl restart systemd-journald
 log_success "systemd journal limits applied"
 
-# 2️⃣ Configure logrotate (SAFE)
+# 2️Configure logrotate (SAFE)
 sudo tee /etc/logrotate.d/syslog >/dev/null <<EOF
 /var/log/syslog
 {
@@ -106,7 +106,7 @@ EOF
 sudo logrotate -f /etc/logrotate.d/syslog
 log_success "logrotate configured safely"
 
-# 3️⃣ Cleanup old logs
+# 3️Cleanup old logs
 sudo journalctl --vacuum-size=200M
 sudo journalctl --vacuum-time=7d
 sudo rm -f /var/log/*.gz /var/log/*.[0-9] 2>/dev/null || true
@@ -161,17 +161,26 @@ log_success "Python dependencies installed"
 log_step "Writing environment file"
 
 cat > "$ENV_FILE" <<EOF
+# S3 Buckets
 JOBS__FILES_S3_BUCKET=${JOBS__FILES_S3_BUCKET}
 FRONTEND_S3_BUCKET=${FRONTEND_S3_BUCKET}
+
+# Database
 DB_HOST=${DB_HOST}
 DB_PORT=${DB_PORT}
 DB_USER=${DB_USER}
 DB_PASSWORD=${DB_PASSWORD}
 DB_NAME=${DB_NAME}
+
+# SQS
 SQS_QUEUE_URL=${SQS_QUEUE_URL}
+
+# Backend / Worker
 WORKER_HOST=${WORKER_HOST}
 API_HOST=${API_HOST}
 VITE_BACKEND_URL=${VITE_BACKEND_URL}
+
+# Nutrient API
 NUTRIENT_API_KEY=${NUTRIENT_API_KEY}
 NUTRIENT_BASE_URL=${NUTRIENT_BASE_URL}
 NUTRIENT_SESSION_URL=${NUTRIENT_SESSION_URL}
