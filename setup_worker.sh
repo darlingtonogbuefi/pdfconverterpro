@@ -1,5 +1,5 @@
 #!/bin/bash
-#     setup_worker.sh
+#  setup_worker.sh
 
 set -euo pipefail
 
