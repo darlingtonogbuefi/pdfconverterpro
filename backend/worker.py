@@ -91,7 +91,7 @@ while True:
             # UPLOAD TO FILES BUCKET
             # --------------------------
             s3_key = f"outputs/{job_id}/result.pptx"
-            upload_file_to_s3(output_path, s3_key, bucket_name=JOBS__FILES_S3_BUCKET)
+            upload_file_to_s3(output_path, s3_key)
             logger.info(f"Uploaded converted PPTX for job {job_id} to s3://{JOBS__FILES_S3_BUCKET}/{s3_key}")
 
             # --------------------------
