@@ -1,4 +1,6 @@
-import logging
+# backend\worker.py
+
+import logging 
 import boto3
 import json
 from backend.services.pdf_to_powerpoint import convert_pdf_to_ppt
@@ -51,19 +53,33 @@ while True:
         job_id = body.get("job_id", "unknown")
         input_s3_key = body.get("input_s3_key", "unknown")
 
+        input_path = None
+        output_path = None
+
         # Only log if something unusual happens
         try:
+            # Download PDF from S3
             input_path = download_file(input_s3_key)
+
+            # Create temporary output PPTX file
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pptx") as tmp_out:
                 output_path = tmp_out.name
-            convert_pdf_to_ppt(input_path, output_path)
+
+            # Pass original_name to prevent missing argument error
+            original_name = os.path.basename(input_s3_key)
+            convert_pdf_to_ppt(input_path, output_path, original_name)
+
+            # Upload result to S3
             upload_file_to_s3(output_path, f"outputs/{job_id}/result.pptx")
+
         finally:
-            if os.path.exists(input_path):
+            # Clean up temp files safely
+            if input_path and os.path.exists(input_path):
                 os.remove(input_path)
-            if os.path.exists(output_path):
+            if output_path and os.path.exists(output_path):
                 os.remove(output_path)
 
+        # Delete processed message from SQS
         sqs.delete_message(
             QueueUrl=SQS_QUEUE_URL,
             ReceiptHandle=msg["ReceiptHandle"]
