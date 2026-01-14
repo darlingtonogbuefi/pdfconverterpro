@@ -1,4 +1,4 @@
-#!/bin/bash      
+#!/bin/bash
 # setup_worker.sh
 
 set -euo pipefail
@@ -32,13 +32,11 @@ log_error() {
 # -----------------------------------
 log_step "Cleaning old logs and configuring journal/logrotate limits before deployment"
 
-# 1️⃣ Cleanup old logs immediately
 sudo rm -f /var/log/syslog /var/log/syslog.* /var/log/*.gz /var/log/*.[0-9] 2>/dev/null || true
 sudo journalctl --vacuum-size=50M
 sudo journalctl --vacuum-time=7d
 log_success "Old logs cleaned"
 
-# 2️⃣ Limit systemd journal size
 sudo mkdir -p /etc/systemd/journald.conf.d
 sudo tee /etc/systemd/journald.conf.d/limits.conf >/dev/null <<EOF
 [Journal]
@@ -51,7 +49,6 @@ sudo systemctl daemon-reexec
 sudo systemctl restart systemd-journald
 log_success "systemd journal limits applied (SystemMaxUse=50M, RuntimeMaxUse=50M)"
 
-# 3️⃣ Configure logrotate for syslog
 sudo tee /etc/logrotate.d/syslog >/dev/null <<EOF
 /var/log/syslog
 {
@@ -83,26 +80,18 @@ if [ -z "${JOBS__FILES_S3_BUCKET:-}" ]; then
 fi
 
 AWS_REGION="${AWS_REGION:-us-east-1}"
-
 echo "JOBS__FILES_S3_BUCKET=$JOBS__FILES_S3_BUCKET"
 echo "AWS_REGION=$AWS_REGION"
 
 # -----------------------------------
-# System packages
+# System packages (quiet + noninteractive)
 # -----------------------------------
 log_step "Installing system packages (Python, OCR, PDF tools)"
-if apt-get update && apt-get install -y \
-    python3 \
-    python3-venv \
-    python3-pip \
-    git \
-    snapd \
-    libgl1 \
-    libglib2.0-0 \
-    tesseract-ocr \
-    poppler-utils \
-    ghostscript
-then
+export DEBIAN_FRONTEND=noninteractive
+
+apt-get update -qq >/dev/null 2>&1
+if apt-get install -y -qq python3 python3-venv python3-pip git snapd libgl1 libglib2.0-0 \
+    tesseract-ocr poppler-utils ghostscript >/dev/null 2>&1; then
     log_success "System packages installed"
     sudo snap set system refresh.retain=2
 else
@@ -115,57 +104,32 @@ fi
 # -----------------------------------
 log_step "Verifying OCR and PDF tooling availability"
 
-if tesseract --version >/dev/null 2>&1; then
-    log_success "Tesseract OCR is available"
-else
-    log_error "Tesseract OCR is NOT available"
-    exit 1
-fi
-
-if pdftoppm -h >/dev/null 2>&1; then
-    log_success "Poppler (pdftoppm) is available"
-else
-    log_error "Poppler is NOT available"
-    exit 1
-fi
-
-if gs --version >/dev/null 2>&1; then
-    log_success "Ghostscript is available"
-else
-    log_error "Ghostscript is NOT available"
-    exit 1
-fi
+for tool in tesseract pdftoppm gs; do
+    if command -v $tool >/dev/null 2>&1; then
+        log_success "$tool is available"
+    else
+        log_error "$tool is NOT available"
+        exit 1
+    fi
+done
 
 # -----------------------------------
 # Clone or update repository
 # -----------------------------------
 log_step "Cloning or updating repository"
 
-# Step 0: Fix Git folder permissions if repo exists
 if [ -d "$APP_DIR" ]; then
-    sudo chown -R $APP_USER:$APP_USER "$APP_DIR/.git"
-    sudo chmod -R u+rwX "$APP_DIR/.git"
     sudo chown -R $APP_USER:$APP_USER "$APP_DIR"
 fi
 
 cd /home/ubuntu
 if [ ! -d "$APP_DIR" ]; then
-    echo "Cloning repository..."
-    if sudo -u $APP_USER git clone "$REPO_URL" "$APP_DIR"; then
-        log_success "Repository cloned"
-    else
-        log_error "Failed to clone repository"
-        exit 1
-    fi
+    sudo -u $APP_USER git clone "$REPO_URL" "$APP_DIR" >/dev/null 2>&1
+    log_success "Repository cloned"
 else
-    echo "Updating repository..."
     cd "$APP_DIR"
-    if sudo -u $APP_USER git pull origin main; then
-        log_success "Repository updated"
-    else
-        log_error "Failed to update repository"
-        exit 1
-    fi
+    sudo -u $APP_USER git pull origin main >/dev/null 2>&1
+    log_success "Repository updated"
 fi
 
 # -----------------------------------
@@ -174,13 +138,8 @@ fi
 log_step "Setting up Python virtual environment"
 cd "$APP_DIR"
 if [ ! -d "$VENV_DIR" ]; then
-    echo "Creating virtual environment..."
-    if sudo -u $APP_USER python3 -m venv venv; then
-        log_success "Virtual environment created"
-    else
-        log_error "Failed to create virtual environment"
-        exit 1
-    fi
+    sudo -u $APP_USER python3 -m venv venv >/dev/null 2>&1
+    log_success "Virtual environment created"
 fi
 
 sudo -u $APP_USER mkdir -p /home/$APP_USER/.cache/pip
@@ -188,8 +147,9 @@ sudo chown -R $APP_USER:$APP_USER /home/$APP_USER/.cache
 
 source "$VENV_DIR/bin/activate"
 export PIP_USER=no
-sudo -H -u $APP_USER "$VENV_DIR/bin/pip" install --upgrade --no-cache-dir pip wheel setuptools
-sudo -H -u $APP_USER "$VENV_DIR/bin/pip" install --upgrade --no-cache-dir -r requirements.txt uvicorn opencv-python camelot-py
+
+sudo -H -u $APP_USER "$VENV_DIR/bin/pip" install --upgrade --no-cache-dir pip wheel setuptools >/dev/null 2>&1
+sudo -H -u $APP_USER "$VENV_DIR/bin/pip" install --upgrade --no-cache-dir -r requirements.txt uvicorn opencv-python camelot-py >/dev/null 2>&1
 log_success "Python dependencies including camelot and OpenCV installed"
 deactivate
 
@@ -197,7 +157,7 @@ deactivate
 # Environment file for systemd
 # -----------------------------------
 log_step "Writing environment file for systemd"
-if cat > "$ENV_FILE" <<EOF
+cat > "$ENV_FILE" <<EOF
 # S3 Buckets
 JOBS__FILES_S3_BUCKET=${JOBS__FILES_S3_BUCKET}
 FRONTEND_S3_BUCKET=${FRONTEND_S3_BUCKET}
@@ -223,21 +183,16 @@ NUTRIENT_BASE_URL=${NUTRIENT_BASE_URL}
 NUTRIENT_SESSION_URL=${NUTRIENT_SESSION_URL}
 NUTRIENT_SIGN_URL=${NUTRIENT_SIGN_URL}
 EOF
-then
-    chmod 600 "$ENV_FILE"
-    log_success "Environment file created at $ENV_FILE with SSM secrets only"
-else
-    log_error "Failed to create environment file"
-    exit 1
-fi
+chmod 600 "$ENV_FILE"
+log_success "Environment file created at $ENV_FILE"
 
 # -----------------------------------
-# Create systemd service for Worker
+# Create systemd service for Worker (quiet)
 # -----------------------------------
 log_step "Creating systemd service for Worker"
 SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
 
-if cat > "$SERVICE_FILE" <<EOF
+cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=PDF Converter Pro Worker
 After=network-online.target
@@ -250,61 +205,37 @@ WorkingDirectory=$APP_DIR
 ExecStart=$VENV_DIR/bin/python -m backend.worker
 Restart=always
 RestartSec=5
-StandardOutput=journal
-StandardError=journal
+StandardOutput=null
+StandardError=null
 EnvironmentFile=$ENV_FILE
 
 [Install]
 WantedBy=multi-user.target
 EOF
-then
-    log_success "Systemd service file created at $SERVICE_FILE"
-else
-    log_error "Failed to create systemd service file"
-    exit 1
-fi
+log_success "Systemd service file created at $SERVICE_FILE"
 
 # -----------------------------------
 # Enable & start service
 # -----------------------------------
 log_step "Enabling and starting Worker service"
-if systemctl daemon-reload && systemctl enable "$SERVICE_NAME" && systemctl restart "$SERVICE_NAME"; then
-    log_success "Service $SERVICE_NAME enabled and started"
-else
-    log_error "Failed to enable/start service $SERVICE_NAME"
-    exit 1
-fi
-
-systemctl status "$SERVICE_NAME" --no-pager || echo "Could not retrieve service status"
+systemctl daemon-reload
+systemctl enable "$SERVICE_NAME" >/dev/null 2>&1
+systemctl restart "$SERVICE_NAME" >/dev/null 2>&1
+log_success "Service $SERVICE_NAME enabled and started"
 
 # -----------------------------------
 # AWS SSM Agent (Snap)
 # -----------------------------------
 log_step "Ensuring AWS SSM Agent is installed and running"
 if ! snap list | grep -q amazon-ssm-agent; then
-    echo "Installing AWS SSM Agent..."
-    if snap install amazon-ssm-agent --classic; then
-        log_success "AWS SSM Agent installed"
-    else
-        log_error "Failed to install AWS SSM Agent"
-    fi
+    snap install amazon-ssm-agent --classic >/dev/null 2>&1
+    log_success "AWS SSM Agent installed"
 fi
 
-if ! snap services | grep -q amazon-ssm-agent; then
-    if snap enable amazon-ssm-agent; then
-        log_success "SSM Agent enabled"
-    else
-        log_error "Failed to enable SSM Agent"
-    fi
-fi
-
-if systemctl enable snap.amazon-ssm-agent.amazon-ssm-agent.service && \
-   systemctl restart snap.amazon-ssm-agent.amazon-ssm-agent.service
-then
-    log_success "SSM Agent service enabled and restarted"
-else
-    log_error "Failed to start SSM Agent service"
-fi
+snap enable amazon-ssm-agent >/dev/null 2>&1 || true
+systemctl enable snap.amazon-ssm-agent.amazon-ssm-agent.service >/dev/null 2>&1
+systemctl restart snap.amazon-ssm-agent.amazon-ssm-agent.service >/dev/null 2>&1
+log_success "SSM Agent service enabled and restarted"
 
 log_step "Worker setup complete and running"
 echo "JOBS__FILES_S3_BUCKET=$JOBS__FILES_S3_BUCKET"
