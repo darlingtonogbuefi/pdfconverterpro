@@ -1,4 +1,6 @@
 // src/lib/backendJobs.ts
+
+
 import type { ConvertedFile } from '@/types/converter';
 
 interface JobResponse {
@@ -13,6 +15,11 @@ interface JobStatusResponse {
 }
 
 /**
+ * Backend base URL (from environment variable)
+ */
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
+/**
  * Submit files for conversion
  */
 export async function submitJob(
@@ -23,7 +30,7 @@ export async function submitJob(
   files.forEach(f => formData.append('files', f));
   formData.append('conversion_type', conversionType);
 
-  const resp = await fetch('/api/jobs', { method: 'POST', body: formData });
+  const resp = await fetch(`${BACKEND_URL}/api/jobs`, { method: 'POST', body: formData });
   if (!resp.ok) throw new Error('Failed to submit job');
   return resp.json();
 }
@@ -38,18 +45,17 @@ export async function waitForJobResult(
   return new Promise((resolve, reject) => {
     const poll = async () => {
       try {
-        const resp = await fetch(`/api/jobs/${jobId}`);
+        const resp = await fetch(`${BACKEND_URL}/api/jobs/${jobId}`);
         const data: JobStatusResponse = await resp.json();
 
         if (data.status === 'success' && data.result_url) {
-          // Fetch the actual file blob
           const fileResp = await fetch(data.result_url);
           const blob = await fileResp.blob();
 
           resolve({
             name: `converted-file.${jobId}.pptx`,
             url: data.result_url,
-            blob, // ✅ satisfies ConvertedFile
+            blob,
           });
         } else if (data.status === 'failed') {
           reject(new Error(data.error || 'Conversion failed'));
