@@ -65,36 +65,17 @@ resource "aws_instance" "api" {
   disable_api_termination = false
 
   # ------------------------------
-  # User data: install SSM & bootstrap API repo
+  # Root volume increased to 30 GB
   # ------------------------------
-  user_data = <<-EOF
-              #!/bin/bash
-              set -e
+  root_block_device {
+    volume_size           = 15
+    volume_type           = "gp3"
+    delete_on_termination = true
+  }
 
-              # Install SSM agent via Snap
-              sudo snap install amazon-ssm-agent --classic
-              sudo snap enable amazon-ssm-agent
-              sudo snap start amazon-ssm-agent
-
-              # Optional: clone or update repo
-              cd /home/ubuntu
-              if [ ! -d pdfconverterpro ]; then
-                  git clone ${var.pdfconverterpro_repo} pdfconverterpro
-              else
-                  cd pdfconverterpro
-                  git pull origin main
-              fi
-
-              # Set up Python environment
-              cd pdfconverterpro
-              python3 -m venv venv || true
-              source venv/bin/activate
-              pip install --upgrade pip
-              pip install -r requirements.txt
-
-              # Start API service (systemd or fallback)
-              sudo systemctl restart pdfconvertpro-api || nohup python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
-              EOF
+  # ------------------------------
+  # User data removed
+  # ------------------------------
 }
 
 # ============================
@@ -118,34 +99,15 @@ resource "aws_instance" "worker" {
   disable_api_termination = false
 
   # ------------------------------
-  # User data: install SSM & bootstrap Worker repo
+  # Root volume increased to 30 GB
   # ------------------------------
-  user_data = <<-EOF
-              #!/bin/bash
-              set -e
+  root_block_device {
+    volume_size           = 15
+    volume_type           = "gp3"
+    delete_on_termination = true
+  }
 
-              # Install SSM agent via Snap
-              sudo snap install amazon-ssm-agent --classic
-              sudo snap enable amazon-ssm-agent
-              sudo snap start amazon-ssm-agent
-
-              # Optional: clone or update repo
-              cd /home/ubuntu
-              if [ ! -d pdfconverterpro ]; then
-                  git clone ${var.pdfconverterpro_repo} pdfconverterpro
-              else
-                  cd pdfconverterpro
-                  git pull origin main
-              fi
-
-              # Set up Python environment
-              cd pdfconverterpro
-              python3 -m venv venv || true
-              source venv/bin/activate
-              pip install --upgrade pip
-              pip install -r requirements.txt
-
-              # Start Worker service (systemd or fallback)
-              sudo systemctl restart pdfconvertpro-worker || nohup python -m backend.worker --host 0.0.0.0 &
-              EOF
+  # ------------------------------
+  # User data removed
+  # ------------------------------
 }
