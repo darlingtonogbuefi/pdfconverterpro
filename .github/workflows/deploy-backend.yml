@@ -1,6 +1,6 @@
 # .github/workflows/deploy-backend.yml
 
-name: Deploy Backend & Worker to EC2 (SSM + OIDC)
+name: Deploy Backend API Servers to EC2 (SSM + OIDC)
 
 on:
   push:
@@ -54,45 +54,45 @@ jobs:
           terraform init -input=false
 
       # ============================
-      # Get API Instance IDs from Terraform
+      # Get api_server1 Instance IDs from Terraform
       # ============================
-      - name: Get API Instance IDs
-        id: tf_api
+      - name: Get api_server1 Instance IDs
+        id: tf_api_server1
         run: |
           cd infra_core_terraform     
-          TF_API_RAW=$(terraform output -json api_instance_ids 2>/dev/null || true)
+          TF_API_RAW=$(terraform output -json api_server1_ids 2>/dev/null || true)
           TF_API_JSON=$(echo "$TF_API_RAW" | sed -n 's/^::debug::stdout: \(.*\)%0A$/\1/p')
           TF_API_JSON=${TF_API_JSON:-$TF_API_RAW}
           echo "$TF_API_JSON" | jq -e . >/dev/null || { echo "ERROR: Invalid JSON!"; exit 1; }
-          API_IDS=$(echo "$TF_API_JSON" | jq -r '.[]')
-          if [ -n "$API_IDS" ]; then
-            echo "API_INSTANCE_IDS=$API_IDS" >> $GITHUB_ENV
+          API_SERVER1_IDS=$(echo "$TF_API_JSON" | jq -r '.[]')
+          if [ -n "$API_SERVER1_IDS" ]; then
+            echo "API_SERVER1_IDS=$API_SERVER1_IDS" >> $GITHUB_ENV
           else
-            echo "ERROR: No API instance IDs found!"; exit 1
+            echo "ERROR: No api_server1 instance IDs found!"; exit 1
           fi
 
       # ============================
-      # Get Worker Instance IDs from Terraform
+      # Get api_server2 Instance IDs from Terraform
       # ============================
-      - name: Get Worker Instance IDs
-        id: tf_worker
+      - name: Get api_server2 Instance IDs
+        id: tf_api_server2
         run: |
           cd infra_core_terraform
-          TF_WORKER_RAW=$(terraform output -json worker_instance_ids 2>/dev/null || true)
+          TF_WORKER_RAW=$(terraform output -json api_server2_ids 2>/dev/null || true)
           TF_WORKER_JSON=$(echo "$TF_WORKER_RAW" | sed -n 's/^::debug::stdout: \(.*\)%0A$/\1/p')
           TF_WORKER_JSON=${TF_WORKER_JSON:-$TF_WORKER_RAW}
           echo "$TF_WORKER_JSON" | jq -e . >/dev/null || { echo "ERROR: Invalid JSON!"; exit 1; }
-          WORKER_IDS=$(echo "$TF_WORKER_JSON" | jq -r '.[]')
-          if [ -n "$WORKER_IDS" ]; then
-            echo "WORKER_IDS=$WORKER_IDS" >> $GITHUB_ENV
+          API_SERVER2_IDS=$(echo "$TF_WORKER_JSON" | jq -r '.[]')
+          if [ -n "$API_SERVER2_IDS" ]; then
+            echo "API_SERVER2_IDS=$API_SERVER2_IDS" >> $GITHUB_ENV
           else
-            echo "ERROR: No Worker instance IDs found!"; exit 1
+            echo "ERROR: No api_server2 instance IDs found!"; exit 1
           fi
 
       # ============================
-      # Deploy API via SSM (clone/update repo + run setup)
+      # Deploy api_server1 via SSM (clone/update repo + run setup)
       # ============================
-      - name: Deploy API via SSM with all secrets
+      - name: Deploy api_server1 via SSM with all secrets
         env:
           JOBS__FILES_S3_BUCKET: ${{ secrets.JOBS__FILES_S3_BUCKET }}
           DB_HOST: ${{ secrets.DB_HOST }}
@@ -108,16 +108,16 @@ jobs:
           NUTRIENT_BASE_URL: ${{ secrets.NUTRIENT_BASE_URL }}
           NUTRIENT_SESSION_URL: ${{ secrets.NUTRIENT_SESSION_URL }}
           NUTRIENT_SIGN_URL: ${{ secrets.NUTRIENT_SIGN_URL }}
-          WORKER_HOST: ${{ secrets.WORKER_HOST }}
-          API_HOST: ${{ secrets.API_HOST }}
+          API_SERVER2_HOST: ${{ secrets.API_SERVER2_HOST }}
+          API_SERVER1_HOST: ${{ secrets.API_SERVER1_HOST }}
           FRONTEND_S3_BUCKET: ${{ secrets.FRONTEND_S3_BUCKET }}
         run: |
-          echo "DEBUG: Deploying API to $API_INSTANCE_IDS with bucket $JOBS__FILES_S3_BUCKET"
+          echo "DEBUG: Deploying api_server1 to $API_SERVER1_IDS with bucket $JOBS__FILES_S3_BUCKET"
 
           COMMAND_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
-            --instance-ids $API_INSTANCE_IDS \
-            --comment "Deploy API from GitHub Actions" \
+            --instance-ids $API_SERVER1_IDS \
+            --comment "Deploy api_server1 from GitHub Actions" \
             --parameters "commands=[
               \"export HOME=/home/ubuntu\",
               \"export JOBS__FILES_S3_BUCKET=${JOBS__FILES_S3_BUCKET}\",
@@ -134,15 +134,15 @@ jobs:
               \"export NUTRIENT_BASE_URL=${NUTRIENT_BASE_URL}\",
               \"export NUTRIENT_SESSION_URL=${NUTRIENT_SESSION_URL}\",
               \"export NUTRIENT_SIGN_URL=${NUTRIENT_SIGN_URL}\",
-              \"export WORKER_HOST=${WORKER_HOST}\",
-              \"export API_HOST=${API_HOST}\",
+              \"export API_SERVER2_HOST=${API_SERVER2_HOST}\",
+              \"export API_SERVER1_HOST=${API_SERVER1_HOST}\",
               \"export FRONTEND_S3_BUCKET=${FRONTEND_S3_BUCKET}\",
               \"if [ ! -d /home/ubuntu/pdfconverterpro ]; then git clone https://github.com/darlingtonogbuefi/pdfconverterpro.git /home/ubuntu/pdfconverterpro; fi\",
               \"cd /home/ubuntu/pdfconverterpro\",
               \"git config --global --add safe.directory /home/ubuntu/pdfconverterpro || git config --system --add safe.directory /home/ubuntu/pdfconverterpro\",
               \"git fetch origin\",
               \"git reset --hard origin/main\",
-              \"if [ -f setup_api.sh ]; then chmod +x setup_api.sh; bash setup_api.sh; fi\"
+              \"if [ -f setup_api_server1.sh ]; then chmod +x setup_api_server1.sh; bash setup_api_server1.sh; fi\" 
             ]" \
             --timeout-seconds 3600 \
             --query "Command.CommandId" --output text)
@@ -163,12 +163,12 @@ jobs:
 
           aws ssm get-command-invocation \
             --command-id "$COMMAND_ID" \
-            --instance-id "$API_INSTANCE_IDS"
+            --instance-id "$API_SERVER1_IDS"
 
       # ============================
-      # Deploy Worker via SSM (clone/update repo + run setup)
+      # Deploy api_server2 via SSM (clone/update repo + run setup)
       # ============================
-      - name: Deploy Worker via SSM with all secrets
+      - name: Deploy api_server2 via SSM with all secrets
         env:
           JOBS__FILES_S3_BUCKET: ${{ secrets.JOBS__FILES_S3_BUCKET }}
           DB_HOST: ${{ secrets.DB_HOST }}
@@ -184,16 +184,16 @@ jobs:
           NUTRIENT_BASE_URL: ${{ secrets.NUTRIENT_BASE_URL }}
           NUTRIENT_SESSION_URL: ${{ secrets.NUTRIENT_SESSION_URL }}
           NUTRIENT_SIGN_URL: ${{ secrets.NUTRIENT_SIGN_URL }}
-          WORKER_HOST: ${{ secrets.WORKER_HOST }}
-          API_HOST: ${{ secrets.API_HOST }}
+          API_SERVER2_HOST: ${{ secrets.API_SERVER2_HOST }}
+          API_SERVER1_HOST: ${{ secrets.API_SERVER1_HOST }}
           FRONTEND_S3_BUCKET: ${{ secrets.FRONTEND_S3_BUCKET }}
         run: |
-          echo "DEBUG: Deploying Worker to $WORKER_IDS with bucket $JOBS__FILES_S3_BUCKET"
+          echo "DEBUG: Deploying api_server2 to $API_SERVER2_IDS with bucket $JOBS__FILES_S3_BUCKET"
 
           COMMAND_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
-            --instance-ids $WORKER_IDS \
-            --comment "Deploy Worker from GitHub Actions" \
+            --instance-ids $API_SERVER2_IDS \
+            --comment "Deploy api_server2 from GitHub Actions" \
             --parameters "commands=[
               \"export HOME=/home/ubuntu\",
               \"export JOBS__FILES_S3_BUCKET=${JOBS__FILES_S3_BUCKET}\",
@@ -210,15 +210,15 @@ jobs:
               \"export NUTRIENT_BASE_URL=${NUTRIENT_BASE_URL}\",
               \"export NUTRIENT_SESSION_URL=${NUTRIENT_SESSION_URL}\",
               \"export NUTRIENT_SIGN_URL=${NUTRIENT_SIGN_URL}\",
-              \"export WORKER_HOST=${WORKER_HOST}\",
-              \"export API_HOST=${API_HOST}\",
+              \"export API_SERVER2_HOST=${API_SERVER2_HOST}\",
+              \"export API_SERVER1_HOST=${API_SERVER1_HOST}\",
               \"export FRONTEND_S3_BUCKET=${FRONTEND_S3_BUCKET}\",
               \"if [ ! -d /home/ubuntu/pdfconverterpro ]; then git clone https://github.com/darlingtonogbuefi/pdfconverterpro.git /home/ubuntu/pdfconverterpro; fi\",
               \"cd /home/ubuntu/pdfconverterpro\",
               \"git config --global --add safe.directory /home/ubuntu/pdfconverterpro || git config --system --add safe.directory /home/ubuntu/pdfconverterpro\",
               \"git fetch origin\",
               \"git reset --hard origin/main\",
-              \"if [ -f setup_worker.sh ]; then chmod +x setup_worker.sh; bash setup_worker.sh; fi\"
+              \"if [ -f setup_api_server2.sh ]; then chmod +x setup_api_server2.sh; bash setup_api_server2.sh; fi\" 
             ]" \
             --timeout-seconds 3600 \
             --query "Command.CommandId" --output text)
@@ -239,4 +239,4 @@ jobs:
 
           aws ssm get-command-invocation \
             --command-id "$COMMAND_ID" \
-            --instance-id "$WORKER_IDS"
+            --instance-id "$API_SERVER2_IDS"

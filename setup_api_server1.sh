@@ -1,5 +1,5 @@
 #!/bin/bash
-# setup_api.sh
+# setup_api_server1.sh
 
 set -euo pipefail
 
@@ -7,7 +7,7 @@ APP_USER="ubuntu"
 APP_DIR="/home/ubuntu/pdfconverterpro"
 VENV_DIR="$APP_DIR/venv"
 REPO_URL="https://github.com/darlingtonogbuefi/pdfconverterpro.git"
-SERVICE_NAME="pdfconverterpro-api"
+SERVICE_NAME="api_server1"
 ENV_FILE="/etc/default/$SERVICE_NAME"
 
 # -------------------------
@@ -66,14 +66,11 @@ log_success "System packages installed"
 # -----------------------------------
 log_step "Configuring log rotation and journal limits"
 
-# FIX LOG DIRECTORY PERMISSIONS (DEFENSIVE)
 sudo chown root:root /var/log
 sudo chmod 755 /var/log
-
 sudo chown root:adm /var/log/syslog || true
 sudo chmod 640 /var/log/syslog || true
 
-# 1️Limit systemd journal size
 sudo mkdir -p /etc/systemd/journald.conf.d
 sudo tee /etc/systemd/journald.conf.d/limits.conf >/dev/null <<EOF
 [Journal]
@@ -85,7 +82,6 @@ sudo systemctl daemon-reexec
 sudo systemctl restart systemd-journald
 log_success "systemd journal limits applied"
 
-# 2️Configure logrotate (SAFE)
 sudo tee /etc/logrotate.d/syslog >/dev/null <<EOF
 /var/log/syslog
 {
@@ -106,7 +102,6 @@ EOF
 sudo logrotate -f /etc/logrotate.d/syslog
 log_success "logrotate configured safely"
 
-# 3️Cleanup old logs
 sudo journalctl --vacuum-size=200M
 sudo journalctl --vacuum-time=7d
 sudo rm -f /var/log/*.gz /var/log/*.[0-9] 2>/dev/null || true
@@ -177,9 +172,9 @@ SQS_QUEUE_URL=${SQS_QUEUE_URL}
 FRONTEND_SQS_QUEUE_URL=${FRONTEND_SQS_QUEUE_URL}
 SQS_DLQ_URL=${SQS_DLQ_URL}
 
-# Backend / Worker
-WORKER_HOST=${WORKER_HOST}
-API_HOST=${API_HOST}
+# Backend / API Servers
+API_SERVER2_HOST=${API_SERVER2_HOST}
+API_SERVER1_HOST=${API_SERVER1_HOST}
 VITE_BACKEND_URL=${VITE_BACKEND_URL}
 
 # Nutrient API
@@ -201,7 +196,7 @@ SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
 
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
-Description=PDF Converter Pro API
+Description=PDF Converter Pro API Server 1
 After=network-online.target
 Wants=network-online.target
 
@@ -220,4 +215,4 @@ systemctl daemon-reload
 systemctl enable "$SERVICE_NAME"
 systemctl restart "$SERVICE_NAME"
 
-log_success "API service running"
+log_success "API service running as $SERVICE_NAME"

@@ -39,7 +39,7 @@ resource "aws_subnet" "public_2" {
 }
 
 # ============================
-# Private Subnets (API + Workers + RDS)
+# Private Subnets (API Servers + RDS)
 # ============================
 resource "aws_subnet" "private_1" {
   vpc_id            = aws_vpc.main.id
@@ -165,13 +165,20 @@ resource "aws_vpc_endpoint" "s3" {
   }
 }
 
+# ============================
 # SQS Interface Endpoint
+# ============================
 resource "aws_vpc_endpoint" "sqs" {
   vpc_id             = aws_vpc.main.id
   service_name       = "com.amazonaws.${var.aws_region}.sqs"
   vpc_endpoint_type  = "Interface"
   subnet_ids         = [aws_subnet.private_1.id, aws_subnet.private_2.id]
-  security_group_ids = [aws_security_group.worker_sg.id]
+
+  # Allow access from API servers
+  security_group_ids = [
+    aws_security_group.api_server1_sg.id,
+    aws_security_group.api_server2_sg.id
+  ]
 
   tags = {
     Name = "${var.project_name}-sqs-endpoint"

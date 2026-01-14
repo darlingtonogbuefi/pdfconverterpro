@@ -19,7 +19,7 @@ data "aws_ami" "amazon_linux" {
 }
 
 # ============================
-# Ubuntu 22.04 LTS AMI (API + Worker)
+# Ubuntu 22.04 LTS AMI API servers
 # ============================
 data "aws_ami" "ubuntu_lts" {
   most_recent = true
@@ -45,9 +45,24 @@ resource "aws_key_pair" "ec2" {
 }
 
 # ============================
-# API EC2 (Ubuntu LTS)
+# Security Groups (if not defined elsewhere)
 # ============================
-resource "aws_instance" "api" {
+resource "aws_security_group" "api_sg" {
+  name        = "${var.project_name}-api-sg"
+  description = "Security group for API server 1"
+  vpc_id      = aws_vpc.main.id
+}
+
+resource "aws_security_group" "worker_sg" {
+  name        = "${var.project_name}-worker-sg"
+  description = "Security group for API server 2"
+  vpc_id      = aws_vpc.main.id
+}
+
+# ============================
+# API EC2 (Ubuntu LTS) - api_server1
+# ============================
+resource "aws_instance" "api_server1" {
   ami                    = data.aws_ami.ubuntu_lts.id
   instance_type          = var.instance_type
   key_name               = aws_key_pair.ec2.key_name
@@ -56,7 +71,7 @@ resource "aws_instance" "api" {
   subnet_id              = aws_subnet.private_1.id
 
   tags = {
-    Name        = "${var.project_name}-api-${var.environment}"
+    Name        = "api_server1"
     Role        = "api"
     Environment = var.environment
   }
@@ -65,7 +80,7 @@ resource "aws_instance" "api" {
   disable_api_termination = false
 
   # ------------------------------
-  # Root volume increased to 30 GB
+  # Root volume 
   # ------------------------------
   root_block_device {
     volume_size           = 15
@@ -73,15 +88,13 @@ resource "aws_instance" "api" {
     delete_on_termination = true
   }
 
-  # ------------------------------
-  # User data removed
-  # ------------------------------
+
 }
 
 # ============================
-# Worker EC2 (Ubuntu LTS)
+# API EC2 (Ubuntu LTS) - api_server2
 # ============================
-resource "aws_instance" "worker" {
+resource "aws_instance" "api_server2" {
   ami                    = data.aws_ami.ubuntu_lts.id
   instance_type          = var.instance_type
   key_name               = aws_key_pair.ec2.key_name
@@ -90,8 +103,8 @@ resource "aws_instance" "worker" {
   subnet_id              = aws_subnet.private_2.id
 
   tags = {
-    Name        = "${var.project_name}-worker-${var.environment}"
-    Role        = "worker"
+    Name        = "api_server2"
+    Role        = "api"
     Environment = var.environment
   }
 
@@ -99,7 +112,7 @@ resource "aws_instance" "worker" {
   disable_api_termination = false
 
   # ------------------------------
-  # Root volume increased to 30 GB
+  # Root volume 
   # ------------------------------
   root_block_device {
     volume_size           = 15
@@ -107,7 +120,5 @@ resource "aws_instance" "worker" {
     delete_on_termination = true
   }
 
-  # ------------------------------
-  # User data removed
-  # ------------------------------
+ 
 }

@@ -35,11 +35,20 @@ resource "aws_lb_target_group" "api_tg" {
 }
 
 # ============================
-# Register API EC2 in Target Group
+# Register API Server 1 EC2 in Target Group
 # ============================
-resource "aws_lb_target_group_attachment" "api_attachment" {
+resource "aws_lb_target_group_attachment" "api_server1_attachment" {
   target_group_arn = aws_lb_target_group.api_tg.arn
-  target_id        = aws_instance.api.id
+  target_id        = aws_instance.api_server1.id
+  port             = 8000
+}
+
+# ============================
+# Register API Server 2 EC2 in Target Group
+# ============================
+resource "aws_lb_target_group_attachment" "api_server2_attachment" {
+  target_group_arn = aws_lb_target_group.api_tg.arn
+  target_id        = aws_instance.api_server2.id
   port             = 8000
 }
 
@@ -51,7 +60,7 @@ resource "aws_lb_listener" "http" {
   port              = 80
   protocol          = "HTTP"
 
-  # CHANGED: forward directly to target group instead of redirecting to HTTPS
+  # forward directly to target group instead of redirecting to HTTPS
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.api_tg.arn

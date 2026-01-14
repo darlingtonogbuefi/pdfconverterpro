@@ -31,7 +31,7 @@ variable "environment" {
 # EC2 instance type
 # ============================
 variable "instance_type" {
-  description = "EC2 instance type used for application and worker instances"
+  description = "EC2 instance type used for API servers"
   type        = string
   default     = "t3.medium"
 }

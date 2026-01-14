@@ -8,14 +8,14 @@ output "bastion_ssh_user" {
   description = "Default SSH user for the bastion host (Amazon Linux 2023)"
 }
 
-output "api_ssh_user" {
+output "api_server1_ssh_user" {
   value       = "ubuntu"
   description = "Default SSH user for the API EC2 instance (Ubuntu 22.04)"
 }
 
-output "worker_ssh_user" {
+output "api_server2_ssh_user" {
   value       = "ubuntu"
-  description = "Default SSH user for the worker EC2 instance (Ubuntu 22.04)"
+  description = "Default SSH user for the second API EC2 instance (Ubuntu 22.04)"
 }
 
 # ============================
@@ -36,24 +36,24 @@ output "bastion_ssh_command" {
 }
 
 # ============================
-# API & Worker outputs
+# API Server outputs
 # ============================
-output "api_host_private_ip" {
-  value       = aws_instance.api.private_ip
-  description = "Private IP of the API EC2 instance"
+output "api_server1_host_private_ip" {
+  value       = aws_instance.api_server1.private_ip
+  description = "Private IP of the API server 1 EC2 instance"
 }
 
-output "worker_host_private_ip" {
-  value       = aws_instance.worker.private_ip
-  description = "Private IP of the worker EC2 instance"
+output "api_server2_host_private_ip" {
+  value       = aws_instance.api_server2.private_ip
+  description = "Private IP of the API server 2 EC2 instance"
 }
 
-output "api_ssh_command" {
-  value       = "ssh -J ec2-user@${aws_instance.bastion.public_ip} ubuntu@${aws_instance.api.private_ip}"
+output "api_server1_ssh_command" {
+  value       = "ssh -J ec2-user@${aws_instance.bastion.public_ip} ubuntu@${aws_instance.api_server1.private_ip}"
 }
 
-output "worker_ssh_command" {
-  value       = "ssh -J ec2-user@${aws_instance.bastion.public_ip} ubuntu@${aws_instance.worker.private_ip}"
+output "api_server2_ssh_command" {
+  value       = "ssh -J ec2-user@${aws_instance.bastion.public_ip} ubuntu@${aws_instance.api_server2.private_ip}"
 }
 
 # ============================
@@ -73,7 +73,6 @@ output "sqs_dlq_url" {
   value       = aws_sqs_queue.dlq.id
   description = "URL of the SQS Dead Letter Queue"
 }
-
 
 output "frontend_s3_bucket_name" {
   description = "The name of the S3 bucket used for hosting the frontend"
@@ -160,16 +159,15 @@ output "github_actions_role_arn" {
   value       = aws_iam_role.github_actions.arn
 }
 
-# Output API EC2 IDs
-output "api_instance_ids" {
-  description = "The EC2 instance IDs for API servers"
-  value       = [aws_instance.api.id]
+# Output API Server EC2 IDs
+output "api_server1_instance_ids" {
+  description = "The EC2 instance IDs for API server 1"
+  value       = [aws_instance.api_server1.id]
 }
 
-# Output Worker EC2 IDs
-output "worker_instance_ids" {
-  description = "The EC2 instance IDs for Worker servers"
-  value       = [aws_instance.worker.id]
+output "api_server2_instance_ids" {
+  description = "The EC2 instance IDs for API server 2"
+  value       = [aws_instance.api_server2.id]
 }
 
 output "fqdn" {
