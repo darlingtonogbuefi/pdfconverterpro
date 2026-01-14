@@ -213,8 +213,10 @@ WorkingDirectory=$APP_DIR
 ExecStart=$VENV_DIR/bin/python -m backend.worker
 Restart=always
 RestartSec=5
-StandardOutput=null
-StandardError=null
+StandardOutput=journal
+StandardError=journal
+StartLimitBurst=5
+StartLimitIntervalSec=60
 EnvironmentFile=$ENV_FILE
 
 [Install]

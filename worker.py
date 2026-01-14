@@ -1,42 +1,47 @@
-# worker.py (relative to C:\DevOps-Projects\converter_lovable\worker.py) 
-# C:\DevOps-Projects\converter_lovable\worker.py
-
+import logging
 import boto3
 import json
 from backend.services.pdf_to_powerpoint import convert_pdf_to_ppt
-from backend.utils.s3_utils import download_file, upload_file
+from backend.utils.s3_utils import download_file, upload_file_to_s3
 from backend.core.config import AWS_REGION, SQS_QUEUE_URL
 import os
 import tempfile
-import logging
+import time
 
 # --------------------------
-# SETUP LOGGING
+# STARTUP LOGGING
 # --------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s %(levelname)s %(message)s'
-)
-logging.info("Starting PDF Converter Worker")
+startup_logger = logging.getLogger("startup")
+startup_logger.setLevel(logging.INFO)
+startup_handler = logging.StreamHandler()
+startup_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+startup_logger.addHandler(startup_handler)
 
-# --------------------------
-# CONNECT TO SQS
-# --------------------------
+startup_logger.info("Starting PDF Converter Worker")
+
+# Connect to SQS
 sqs = boto3.client("sqs", region_name=AWS_REGION)
-logging.info(f"Connected to SQS queue: {SQS_QUEUE_URL}")
+startup_logger.info(f"Connected to SQS queue: {SQS_QUEUE_URL}")
+
+# --------------------------
+# LOOP LOGGING (minimal)
+# --------------------------
+loop_logger = logging.getLogger("worker_loop")
+loop_logger.setLevel(logging.WARNING)  # only warnings and errors inside loop
+loop_handler = logging.StreamHandler()
+loop_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+loop_logger.addHandler(loop_handler)
 
 # --------------------------
 # MAIN LOOP
 # --------------------------
 while True:
     try:
-        logging.info("Polling SQS for messages...")
         resp = sqs.receive_message(
             QueueUrl=SQS_QUEUE_URL,
             WaitTimeSeconds=20,
             MaxNumberOfMessages=1
         )
-        logging.info(f"Receive response: {resp}")
 
         if "Messages" not in resp:
             continue
@@ -45,42 +50,26 @@ while True:
         body = json.loads(msg["Body"])
         job_id = body.get("job_id", "unknown")
         input_s3_key = body.get("input_s3_key", "unknown")
-        logging.info(f"Processing job {job_id} with input {input_s3_key}")
 
-        # Download input PDF to a temporary file
-        input_path = download_file(input_s3_key)
-        logging.info(f"Downloaded PDF to {input_path}")
-
-        # Prepare a temporary output file for PPTX
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pptx") as tmp_out:
-            output_path = tmp_out.name
-        logging.info(f"Temporary PPTX output path: {output_path}")
-
+        # Only log if something unusual happens
         try:
-            # Convert PDF → PowerPoint
-            logging.info("Starting PDF → PPT conversion...")
+            input_path = download_file(input_s3_key)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pptx") as tmp_out:
+                output_path = tmp_out.name
             convert_pdf_to_ppt(input_path, output_path)
-            logging.info("PDF → PPT conversion complete")
-
-            # Upload result PPTX to S3
-            upload_file(output_path, f"outputs/{job_id}/result.pptx")
-            logging.info(f"Uploaded PPTX to S3: outputs/{job_id}/result.pptx")
-
+            upload_file_to_s3(output_path, f"outputs/{job_id}/result.pptx")
         finally:
-            # Cleanup temporary files
             if os.path.exists(input_path):
                 os.remove(input_path)
-                logging.info(f"Deleted temporary input file: {input_path}")
             if os.path.exists(output_path):
                 os.remove(output_path)
-                logging.info(f"Deleted temporary output file: {output_path}")
 
-        # Delete the SQS message after successful processing
         sqs.delete_message(
             QueueUrl=SQS_QUEUE_URL,
             ReceiptHandle=msg["ReceiptHandle"]
         )
-        logging.info(f"Deleted message from SQS: {msg['ReceiptHandle']}")
 
     except Exception as e:
-        logging.exception(f"Exception occurred in worker loop: {e}")
+        # Only log exceptions, not every loop iteration
+        loop_logger.exception(f"Worker exception: {e}")
+        time.sleep(5)  # avoid tight crash loop
