@@ -57,12 +57,23 @@ output "worker_ssh_command" {
 }
 
 # ============================
-# SQS & S3
+# SQS
 # ============================
 output "sqs_queue_url" {
   value       = aws_sqs_queue.jobs.id
   description = "URL of the SQS jobs queue"
 }
+
+output "frontend_sqs_queue_url" {
+  value       = aws_sqs_queue.frontend_status.id
+  description = "URL of the frontend status SQS queue"
+}
+
+output "sqs_dlq_url" {
+  value       = aws_sqs_queue.dlq.id
+  description = "URL of the SQS Dead Letter Queue"
+}
+
 
 output "frontend_s3_bucket_name" {
   description = "The name of the S3 bucket used for hosting the frontend"

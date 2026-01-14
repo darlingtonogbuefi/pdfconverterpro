@@ -101,6 +101,8 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_NAME: ${{ secrets.DB_NAME }}
           SQS_QUEUE_URL: ${{ secrets.SQS_QUEUE_URL }}
+          FRONTEND_SQS_QUEUE_URL: ${{ secrets.FRONTEND_SQS_QUEUE_URL }}
+          SQS_DLQ_URL: ${{ secrets.SQS_DLQ_URL }}
           VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL }}
           NUTRIENT_API_KEY: ${{ secrets.NUTRIENT_API_KEY }}
           NUTRIENT_BASE_URL: ${{ secrets.NUTRIENT_BASE_URL }}
@@ -125,6 +127,8 @@ jobs:
               \"export DB_PASSWORD=${DB_PASSWORD}\",
               \"export DB_NAME=${DB_NAME}\",
               \"export SQS_QUEUE_URL=${SQS_QUEUE_URL}\",
+              \"export FRONTEND_SQS_QUEUE_URL=${FRONTEND_SQS_QUEUE_URL}\",
+              \"export SQS_DLQ_URL=${SQS_DLQ_URL}\",
               \"export VITE_BACKEND_URL=${VITE_BACKEND_URL}\",
               \"export NUTRIENT_API_KEY=${NUTRIENT_API_KEY}\",
               \"export NUTRIENT_BASE_URL=${NUTRIENT_BASE_URL}\",
@@ -173,6 +177,8 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_NAME: ${{ secrets.DB_NAME }}
           SQS_QUEUE_URL: ${{ secrets.SQS_QUEUE_URL }}
+          FRONTEND_SQS_QUEUE_URL: ${{ secrets.FRONTEND_SQS_QUEUE_URL }}
+          SQS_DLQ_URL: ${{ secrets.SQS_DLQ_URL }}
           VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL }}
           NUTRIENT_API_KEY: ${{ secrets.NUTRIENT_API_KEY }}
           NUTRIENT_BASE_URL: ${{ secrets.NUTRIENT_BASE_URL }}
@@ -197,6 +203,8 @@ jobs:
               \"export DB_PASSWORD=${DB_PASSWORD}\",
               \"export DB_NAME=${DB_NAME}\",
               \"export SQS_QUEUE_URL=${SQS_QUEUE_URL}\",
+              \"export FRONTEND_SQS_QUEUE_URL=${FRONTEND_SQS_QUEUE_URL}\",
+              \"export SQS_DLQ_URL=${SQS_DLQ_URL}\",
               \"export VITE_BACKEND_URL=${VITE_BACKEND_URL}\",
               \"export NUTRIENT_API_KEY=${NUTRIENT_API_KEY}\",
               \"export NUTRIENT_BASE_URL=${NUTRIENT_BASE_URL}\",
