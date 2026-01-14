@@ -88,7 +88,7 @@ sudo tee /etc/logrotate.d/syslog >/dev/null <<EOF
 {
     daily
     rotate 7
-    size 100M
+    size 50M
     compress
     missingok
     notifempty
@@ -100,7 +100,7 @@ sudo tee /etc/logrotate.d/syslog >/dev/null <<EOF
 EOF
 
 sudo logrotate -f /etc/logrotate.d/syslog
-log_success "logrotate configured for /var/log/syslog (max 100MB, 7 rotations)"
+log_success "logrotate configured for /var/log/syslog (max 50MB, 7 rotations)"
 
 # 3️ Cleanup old logs immediately
 sudo journalctl --vacuum-size=50M
