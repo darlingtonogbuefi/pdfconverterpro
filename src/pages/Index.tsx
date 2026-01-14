@@ -6,6 +6,7 @@ import { ConverterSection } from '@/components/ConverterSection';
 import { conversionOptions } from '@/lib/conversionOptions';
 import type { ConversionType, ConversionStatus, ConvertedFile } from '@/types/converter';
 import { convertWithBackend, ConversionEndpoint, uploadFile } from '@/lib/backendApi';
+import { submitJob, waitForJobResult } from '@/lib/backendJobs'; // ✅ async PDF → PPT
 
 export default function Index() {
   const defaultType: ConversionType = 'pdf-watermark';
@@ -44,7 +45,7 @@ export default function Index() {
     files: File[],
     setProgress?: (p: number) => void,
     setStatus?: (s: ConversionStatus) => void,
-    outputOption?: string // <-- new: pdf-to-image format
+    outputOption?: string
   ): Promise<ConvertedFile[]> => {
     if (!files.length || !selectedType) return [];
 
@@ -58,16 +59,36 @@ export default function Index() {
        */
       if (selectedType === 'pdf-edit') {
         const response = await uploadFile('/pdf-edit/extract', files[0]);
-
-        // At this point you would open your editor UI
         console.log('PDF Edit extracted pages:', response.pages);
-
         setStatus?.('idle');
         return [];
       }
 
       /**
-       * ✅ NORMAL CONVERSIONS
+       * ✅ ASYNC CONVERSION: PDF → PPT
+       */
+      if (selectedType === 'pdf-to-powerpoint') {
+        setProgress?.(10);
+        try {
+          const { job_id } = await submitJob(files, selectedType);
+          setProgress?.(30);
+
+          const convertedFile = await waitForJobResult(job_id, 2000); // poll every 2s
+          setConvertedFiles([convertedFile]);
+          setProgress?.(100);
+
+          return [convertedFile];
+        } catch (err: any) {
+          alert(err.message || 'Conversion failed');
+          return [];
+        } finally {
+          setStatus?.('idle');
+          setProgress?.(0);
+        }
+      }
+
+      /**
+       * ✅ NORMAL SYNCHRONOUS CONVERSIONS
        */
       const endpointMap: { [K in ConversionType]?: ConversionEndpoint } = {
         'image-to-pdf': 'imagesToPdf',
@@ -77,7 +98,6 @@ export default function Index() {
         'image-to-word': 'imageToWord',
         'image-to-excel': 'imageToExcel',
         'word-to-excel': 'wordToExcel',
-        'pdf-to-powerpoint': 'pdfToPpt',
         'pdf-split': 'pdfSplit',
         'pdf-merge': 'pdfMerge',
         'pdf-compress': 'pdfCompress',
@@ -90,16 +110,16 @@ export default function Index() {
       const endpoint = endpointMap[selectedType];
       if (!endpoint) throw new Error('Unsupported conversion type');
 
-      // Pass pdf-to-image format to backend if applicable
       const rawResult = await convertWithBackend(
         files,
         endpoint,
-        outputOption ? { format: outputOption.toLowerCase() } : {}, // <-- key change
+        outputOption ? { format: outputOption.toLowerCase() } : {},
         setProgress
       );
 
       const result = Array.isArray(rawResult) ? rawResult : [rawResult];
       setConvertedFiles(result);
+      setProgress?.(100);
       return result;
     } catch (err: any) {
       alert(err.message || 'Conversion failed');
@@ -111,12 +131,12 @@ export default function Index() {
   };
 
   // Confirm conversion type
-  const handleConfirmType = (type: ConversionType) => {
+  const handleConfirmType = async (type: ConversionType) => {
     setSelectedType(type);
     setShowTypePopup(false);
 
     if (pendingFiles.length) {
-      handleConvert(pendingFiles);
+      await handleConvert(pendingFiles);
       setPendingFiles([]);
     }
   };

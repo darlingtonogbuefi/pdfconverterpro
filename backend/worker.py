@@ -1,13 +1,11 @@
 # backend\worker.py
 
-# backend\worker.py
-
 import logging
 import boto3
 import json
 from backend.services.pdf_to_powerpoint import convert_pdf_to_ppt
 from backend.utils.s3_utils import download_file, upload_file_to_s3
-from backend.core.config import AWS_REGION, SQS_QUEUE_URL
+from backend.core.config import AWS_REGION, SQS_QUEUE_URL, FRONTEND_SQS_QUEUE_URL
 import os
 import tempfile
 import time
@@ -39,6 +37,12 @@ sqs = boto3.client("sqs", region_name=AWS_REGION)
 logger.info(f"Connected to SQS queue: {SQS_QUEUE_URL}")
 
 # --------------------------
+# S3 CLIENT AND BUCKET CONFIG
+# --------------------------
+s3 = boto3.client("s3")
+JOBS__FILES_S3_BUCKET = "pdfconvertpro-files-prod"  # bucket for PDFs & converted PPTs
+
+# --------------------------
 # MAIN WORKER LOOP
 # --------------------------
 while True:
@@ -63,35 +67,73 @@ while True:
         output_path = None
 
         try:
-            # Download PDF from S3
+            # --------------------------
+            # DOWNLOAD PDF
+            # --------------------------
             input_path = download_file(input_s3_key)
             logger.debug(f"Downloaded PDF to {input_path}")
 
-            # Create temporary output PPTX file
+            # --------------------------
+            # CREATE TEMP OUTPUT FILE
+            # --------------------------
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pptx") as tmp_out:
                 output_path = tmp_out.name
             logger.debug(f"Temporary output file: {output_path}")
 
-            # Convert PDF to PPT
+            # --------------------------
+            # CONVERT PDF TO PPT
+            # --------------------------
             original_name = os.path.basename(input_s3_key)
             convert_pdf_to_ppt(input_path, output_path, original_name)
             logger.info(f"Conversion successful for job {job_id}")
 
-            # Upload result to S3
-            upload_file_to_s3(output_path, f"outputs/{job_id}/result.pptx")
-            logger.info(f"Uploaded converted PPTX for job {job_id}")
+            # --------------------------
+            # UPLOAD TO FILES BUCKET
+            # --------------------------
+            s3_key = f"outputs/{job_id}/result.pptx"
+            upload_file_to_s3(output_path, s3_key, bucket_name=JOBS__FILES_S3_BUCKET)
+            logger.info(f"Uploaded converted PPTX for job {job_id} to s3://{JOBS__FILES_S3_BUCKET}/{s3_key}")
+
+            # --------------------------
+            # GENERATE PRESIGNED URL
+            # --------------------------
+            presigned_url = s3.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": JOBS__FILES_S3_BUCKET, "Key": s3_key},
+                ExpiresIn=3600  # 1 hour
+            )
+            logger.info(f"Presigned URL for job {job_id}: {presigned_url}")
+
+            # --------------------------
+            # SEND STATUS TO FRONTEND
+            # --------------------------
+            if FRONTEND_SQS_QUEUE_URL:
+                job_status = {
+                    "job_id": job_id,
+                    "status": "success",
+                    "result_url": presigned_url
+                }
+                sqs.send_message(
+                    QueueUrl=FRONTEND_SQS_QUEUE_URL,
+                    MessageBody=json.dumps(job_status)
+                )
+                logger.debug(f"Sent job status with presigned URL for job {job_id} to frontend SQS")
 
         except Exception as e:
             logger.exception(f"Conversion failed for job {job_id}: {e}")
 
         finally:
-            # Clean up temp files
+            # --------------------------
+            # CLEANUP TEMP FILES
+            # --------------------------
             if input_path and os.path.exists(input_path):
                 os.remove(input_path)
             if output_path and os.path.exists(output_path):
                 os.remove(output_path)
 
-        # Delete message from SQS
+        # --------------------------
+        # DELETE MESSAGE FROM SQS
+        # --------------------------
         try:
             sqs.delete_message(
                 QueueUrl=SQS_QUEUE_URL,
