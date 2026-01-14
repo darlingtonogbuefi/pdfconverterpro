@@ -1,5 +1,5 @@
 #!/bin/bash
-#  setup_worker.sh
+# setup_worker.sh
 
 set -euo pipefail
 
@@ -32,6 +32,12 @@ log_error() {
 # -----------------------------------
 log_step "Cleaning old logs and configuring journal/logrotate limits before deployment"
 
+# 🔒 DEFENSIVE: ensure correct log permissions
+sudo chown root:root /var/log
+sudo chmod 755 /var/log
+sudo chown root:adm /var/log/syslog 2>/dev/null || true
+sudo chmod 640 /var/log/syslog 2>/dev/null || true
+
 sudo rm -f /var/log/syslog /var/log/syslog.* /var/log/*.gz /var/log/*.[0-9] 2>/dev/null || true
 sudo journalctl --vacuum-size=50M
 sudo journalctl --vacuum-time=7d
@@ -52,6 +58,7 @@ log_success "systemd journal limits applied (SystemMaxUse=50M, RuntimeMaxUse=50M
 sudo tee /etc/logrotate.d/syslog >/dev/null <<EOF
 /var/log/syslog
 {
+    su root adm
     daily
     rotate 7
     size 50M
@@ -183,11 +190,12 @@ NUTRIENT_BASE_URL=${NUTRIENT_BASE_URL}
 NUTRIENT_SESSION_URL=${NUTRIENT_SESSION_URL}
 NUTRIENT_SIGN_URL=${NUTRIENT_SIGN_URL}
 EOF
+
 chmod 600 "$ENV_FILE"
 log_success "Environment file created at $ENV_FILE"
 
 # -----------------------------------
-# Create systemd service for Worker (quiet)
+# Create systemd service for Worker
 # -----------------------------------
 log_step "Creating systemd service for Worker"
 SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
@@ -212,6 +220,7 @@ EnvironmentFile=$ENV_FILE
 [Install]
 WantedBy=multi-user.target
 EOF
+
 log_success "Systemd service file created at $SERVICE_FILE"
 
 # -----------------------------------
