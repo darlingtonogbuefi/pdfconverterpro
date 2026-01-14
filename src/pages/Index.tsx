@@ -6,7 +6,6 @@ import { ConverterSection } from '@/components/ConverterSection';
 import { conversionOptions } from '@/lib/conversionOptions';
 import type { ConversionType, ConversionStatus, ConvertedFile } from '@/types/converter';
 import { convertWithBackend, ConversionEndpoint, uploadFile } from '@/lib/backendApi';
-import { submitJob, waitForJobResult } from '@/lib/backendJobs'; // ✅ async PDF → PPT
 
 export default function Index() {
   const defaultType: ConversionType = 'pdf-watermark';
@@ -16,7 +15,7 @@ export default function Index() {
   const [progress, setProgress] = useState(0);
   const [convertedFiles, setConvertedFiles] = useState<ConvertedFile[]>([]);
 
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]); 
   const [showTypePopup, setShowTypePopup] = useState(false);
 
   const selectedOption = selectedType
@@ -65,36 +64,14 @@ export default function Index() {
       }
 
       /**
-       * ✅ ASYNC CONVERSION: PDF → PPT
-       */
-      if (selectedType === 'pdf-to-powerpoint') {
-        setProgress?.(10);
-        try {
-          const { job_id } = await submitJob(files, selectedType);
-          setProgress?.(30);
-
-          const convertedFile = await waitForJobResult(job_id, 2000); // poll every 2s
-          setConvertedFiles([convertedFile]);
-          setProgress?.(100);
-
-          return [convertedFile];
-        } catch (err: any) {
-          alert(err.message || 'Conversion failed');
-          return [];
-        } finally {
-          setStatus?.('idle');
-          setProgress?.(0);
-        }
-      }
-
-      /**
-       * ✅ NORMAL SYNCHRONOUS CONVERSIONS
+       * NORMAL SYNCHRONOUS CONVERSIONS (including PDF → PPT)
        */
       const endpointMap: { [K in ConversionType]?: ConversionEndpoint } = {
         'image-to-pdf': 'imagesToPdf',
         'pdf-to-image': 'pdfToImages',
         'pdf-to-word': 'pdfToWord',
         'pdf-to-excel': 'pdfToExcel',
+        'pdf-to-powerpoint': 'pdfToPpt',
         'image-to-word': 'imageToWord',
         'image-to-excel': 'imageToExcel',
         'word-to-excel': 'wordToExcel',
@@ -121,6 +98,7 @@ export default function Index() {
       setConvertedFiles(result);
       setProgress?.(100);
       return result;
+
     } catch (err: any) {
       alert(err.message || 'Conversion failed');
       return [];

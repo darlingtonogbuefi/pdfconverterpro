@@ -87,39 +87,32 @@ async def word_to_excel(file: UploadFile = File(...)):
 
 
 # ----------------------
-# PDF → PowerPoint (ASYNC via SQS) ✅
+# PDF → PowerPoint (SYNC)
 # ----------------------
 @router.post("/pdf-to-powerpoint")
-async def pdf_to_powerpoint(file: UploadFile = File(...)):
+def pdf_to_powerpoint(file: UploadFile = File(...)):
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="PDF file required")
 
-    job_id = str(uuid.uuid4())
-
     with tempfile.TemporaryDirectory() as tmp:
-        pdf_path = os.path.join(tmp, "input.pdf")
+        pdf_path = os.path.join(tmp, "in.pdf")
+        pptx_path = os.path.join(tmp, "out.pptx")
+        output_filename = Path(file.filename).stem + ".pptx"
 
+        # Write uploaded file
         with open(pdf_path, "wb") as f:
-            f.write(await file.read())
+            f.write(file.file.read())
 
-        # Upload input PDF to S3
-        input_s3_key = f"jobs/{job_id}/input.pdf"
-        upload_file_to_s3(pdf_path, input_s3_key)
+        # Convert PDF to PowerPoint synchronously
+        from backend.services.pdf_to_powerpoint import convert_pdf_to_powerpoint
+        convert_pdf_to_powerpoint(pdf_path, pptx_path, file.filename)
 
-    # Send job to SQS
-    send_job({
-        "job_id": job_id,
-        "type": "pdf_to_powerpoint",
-        "input_s3_key": input_s3_key,
-        "original_filename": file.filename
-    })
-
-    # Immediate response (non-blocking)
-    return {
-        "job_id": job_id,
-        "status": "queued"
-    }
-
+        # Return base64-encoded file
+        return {
+            "filename": output_filename,
+            "file": encode_file_to_base64(pptx_path),
+            "success": True
+        }
 
 # ----------------------
 # PDF → Excel (SYNC for now)
