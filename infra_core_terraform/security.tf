@@ -2,7 +2,7 @@
 
 # -----------------------------
 # Security Group for API Server 1
-# Allows traffic from ALB and Bastion
+# Allows traffic from ALB, Bastion, and SSM VPC Endpoints
 # -----------------------------
 resource "aws_security_group" "api_server1_sg" {
   name   = "api-server1-sg"
@@ -30,6 +30,14 @@ resource "aws_security_group" "api_server1_sg" {
     to_port         = 8000
     protocol        = "tcp"
     security_groups = [aws_security_group.bastion_sg.id]
+  }
+
+  # Allow HTTPS traffic to SSM endpoints
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/16"]  # allow within VPC for interface endpoints
   }
 
   egress {
@@ -70,6 +78,14 @@ resource "aws_security_group" "api_server2_sg" {
     to_port         = 8000
     protocol        = "tcp"
     security_groups = [aws_security_group.bastion_sg.id]
+  }
+
+  # Allow HTTPS traffic to SSM endpoints
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/16"]  # allow within VPC for interface endpoints
   }
 
   egress {

@@ -76,7 +76,7 @@ resource "aws_internet_gateway" "igw" {
 # Elastic IP for NAT Gateway
 # ============================
 resource "aws_eip" "nat" {
-  domain = "vpc"   # updated from deprecated vpc = true
+  domain = "vpc"
 
   tags = {
     Name = "${var.project_name}-nat-eip"
@@ -165,9 +165,7 @@ resource "aws_vpc_endpoint" "s3" {
   }
 }
 
-# ============================
 # SQS Interface Endpoint
-# ============================
 resource "aws_vpc_endpoint" "sqs" {
   vpc_id             = aws_vpc.main.id
   service_name       = "com.amazonaws.${var.aws_region}.sqs"
@@ -182,5 +180,53 @@ resource "aws_vpc_endpoint" "sqs" {
 
   tags = {
     Name = "${var.project_name}-sqs-endpoint"
+  }
+}
+
+# ============================
+# SSM VPC Endpoints (for EC2 Systems Manager)
+# ============================
+resource "aws_vpc_endpoint" "ssm" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.aws_region}.ssm"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = [aws_subnet.private_1.id, aws_subnet.private_2.id]
+  security_group_ids = [
+    aws_security_group.api_server1_sg.id,
+    aws_security_group.api_server2_sg.id
+  ]
+
+  tags = {
+    Name = "${var.project_name}-ssm-endpoint"
+  }
+}
+
+resource "aws_vpc_endpoint" "ssmmessages" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.aws_region}.ssmmessages"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = [aws_subnet.private_1.id, aws_subnet.private_2.id]
+  security_group_ids = [
+    aws_security_group.api_server1_sg.id,
+    aws_security_group.api_server2_sg.id
+  ]
+
+  tags = {
+    Name = "${var.project_name}-ssmmessages-endpoint"
+  }
+}
+
+resource "aws_vpc_endpoint" "ec2messages" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.aws_region}.ec2messages"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = [aws_subnet.private_1.id, aws_subnet.private_2.id]
+  security_group_ids = [
+    aws_security_group.api_server1_sg.id,
+    aws_security_group.api_server2_sg.id
+  ]
+
+  tags = {
+    Name = "${var.project_name}-ec2messages-endpoint"
   }
 }
