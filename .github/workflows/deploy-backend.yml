@@ -54,17 +54,26 @@ jobs:
           terraform init -input=false
 
       # ============================
-      # Get api_server1 Instance IDs from Terraform
+      # Get api_server1 Instance IDs
       # ============================
       - name: Get api_server1 Instance IDs
         id: tf_api_server1
         run: |
-          cd infra_core_terraform     
-          TF_API_RAW=$(terraform output -json api_server1_ids 2>/dev/null || true)
-          TF_API_JSON=$(echo "$TF_API_RAW" | sed -n 's/^::debug::stdout: \(.*\)%0A$/\1/p')
-          TF_API_JSON=${TF_API_JSON:-$TF_API_RAW}
-          echo "$TF_API_JSON" | jq -e . >/dev/null || { echo "ERROR: Invalid JSON!"; exit 1; }
-          API_SERVER1_IDS=$(echo "$TF_API_JSON" | jq -r '.[]')
+          cd infra_core_terraform
+          echo "DEBUG: Capturing Terraform api_server1 output"
+
+          TF_API_SERVER1_RAW=$(terraform output -json api_server1_ids 2>/dev/null || true)
+          echo "DEBUG: Raw Terraform api_server1 output:"
+          echo "$TF_API_SERVER1_RAW"
+
+          TF_API_SERVER1_JSON=$(echo "$TF_API_SERVER1_RAW" | sed -n 's/^::debug::stdout: \(.*\)%0A$/\1/p')
+          TF_API_SERVER1_JSON=${TF_API_SERVER1_JSON:-$TF_API_SERVER1_RAW}
+
+          echo "$TF_API_SERVER1_JSON" | jq -e . >/dev/null || { echo "ERROR: Invalid JSON!"; exit 1; }
+
+          API_SERVER1_IDS=$(echo "$TF_API_SERVER1_JSON" | jq -r '.[]')
+          echo "DEBUG: Extracted api_server1 IDs: $API_SERVER1_IDS"
+
           if [ -n "$API_SERVER1_IDS" ]; then
             echo "API_SERVER1_IDS=$API_SERVER1_IDS" >> $GITHUB_ENV
           else
@@ -72,17 +81,26 @@ jobs:
           fi
 
       # ============================
-      # Get api_server2 Instance IDs from Terraform
+      # Get api_server2 Instance IDs
       # ============================
       - name: Get api_server2 Instance IDs
         id: tf_api_server2
         run: |
           cd infra_core_terraform
-          TF_WORKER_RAW=$(terraform output -json api_server2_ids 2>/dev/null || true)
-          TF_WORKER_JSON=$(echo "$TF_WORKER_RAW" | sed -n 's/^::debug::stdout: \(.*\)%0A$/\1/p')
-          TF_WORKER_JSON=${TF_WORKER_JSON:-$TF_WORKER_RAW}
-          echo "$TF_WORKER_JSON" | jq -e . >/dev/null || { echo "ERROR: Invalid JSON!"; exit 1; }
-          API_SERVER2_IDS=$(echo "$TF_WORKER_JSON" | jq -r '.[]')
+          echo "DEBUG: Capturing Terraform api_server2 output"
+
+          TF_API_SERVER2_RAW=$(terraform output -json api_server2_ids 2>/dev/null || true)
+          echo "DEBUG: Raw Terraform api_server2 output:"
+          echo "$TF_API_SERVER2_RAW"
+
+          TF_API_SERVER2_JSON=$(echo "$TF_API_SERVER2_RAW" | sed -n 's/^::debug::stdout: \(.*\)%0A$/\1/p')
+          TF_API_SERVER2_JSON=${TF_API_SERVER2_JSON:-$TF_API_SERVER2_RAW}
+
+          echo "$TF_API_SERVER2_JSON" | jq -e . >/dev/null || { echo "ERROR: Invalid JSON!"; exit 1; }
+
+          API_SERVER2_IDS=$(echo "$TF_API_SERVER2_JSON" | jq -r '.[]')
+          echo "DEBUG: Extracted api_server2 IDs: $API_SERVER2_IDS"
+
           if [ -n "$API_SERVER2_IDS" ]; then
             echo "API_SERVER2_IDS=$API_SERVER2_IDS" >> $GITHUB_ENV
           else
@@ -90,7 +108,7 @@ jobs:
           fi
 
       # ============================
-      # Deploy api_server1 via SSM (clone/update repo + run setup)
+      # Deploy api_server1 via SSM
       # ============================
       - name: Deploy api_server1 via SSM with all secrets
         env:
@@ -142,7 +160,7 @@ jobs:
               \"git config --global --add safe.directory /home/ubuntu/pdfconverterpro || git config --system --add safe.directory /home/ubuntu/pdfconverterpro\",
               \"git fetch origin\",
               \"git reset --hard origin/main\",
-              \"if [ -f setup_api_server1.sh ]; then chmod +x setup_api_server1.sh; bash setup_api_server1.sh; fi\" 
+              \"if [ -f setup_api_server1.sh ]; then chmod +x setup_api_server1.sh; bash setup_api_server1.sh; fi\"
             ]" \
             --timeout-seconds 3600 \
             --query "Command.CommandId" --output text)
@@ -166,7 +184,7 @@ jobs:
             --instance-id "$API_SERVER1_IDS"
 
       # ============================
-      # Deploy api_server2 via SSM (clone/update repo + run setup)
+      # Deploy api_server2 via SSM
       # ============================
       - name: Deploy api_server2 via SSM with all secrets
         env:
@@ -218,7 +236,7 @@ jobs:
               \"git config --global --add safe.directory /home/ubuntu/pdfconverterpro || git config --system --add safe.directory /home/ubuntu/pdfconverterpro\",
               \"git fetch origin\",
               \"git reset --hard origin/main\",
-              \"if [ -f setup_api_server2.sh ]; then chmod +x setup_api_server2.sh; bash setup_api_server2.sh; fi\" 
+              \"if [ -f setup_api_server2.sh ]; then chmod +x setup_api_server2.sh; bash setup_api_server2.sh; fi\"
             ]" \
             --timeout-seconds 3600 \
             --query "Command.CommandId" --output text)
