@@ -1,4 +1,4 @@
-#!/bin/bash     
+#!/bin/bash      
 # setup_worker.sh
 
 set -euo pipefail
@@ -26,6 +26,51 @@ log_success() {
 log_error() {
     echo "ERROR: $1"
 }
+
+# -----------------------------------
+# LOG MANAGEMENT START (APPLY FIRST)
+# -----------------------------------
+log_step "Cleaning old logs and configuring journal/logrotate limits before deployment"
+
+# 1️⃣ Cleanup old logs immediately
+sudo rm -f /var/log/syslog /var/log/syslog.* /var/log/*.gz /var/log/*.[0-9] 2>/dev/null || true
+sudo journalctl --vacuum-size=50M
+sudo journalctl --vacuum-time=7d
+log_success "Old logs cleaned"
+
+# 2️⃣ Limit systemd journal size
+sudo mkdir -p /etc/systemd/journald.conf.d
+sudo tee /etc/systemd/journald.conf.d/limits.conf >/dev/null <<EOF
+[Journal]
+SystemMaxUse=50M
+RuntimeMaxUse=50M
+SystemKeepFree=100M
+EOF
+
+sudo systemctl daemon-reexec
+sudo systemctl restart systemd-journald
+log_success "systemd journal limits applied (SystemMaxUse=50M, RuntimeMaxUse=50M)"
+
+# 3️⃣ Configure logrotate for syslog
+sudo tee /etc/logrotate.d/syslog >/dev/null <<EOF
+/var/log/syslog
+{
+    daily
+    rotate 7
+    size 50M
+    compress
+    missingok
+    notifempty
+    delaycompress
+    copytruncate
+    postrotate
+        /usr/lib/rsyslog/rsyslog-rotate || true
+    endscript
+}
+EOF
+
+sudo logrotate -f /etc/logrotate.d/syslog
+log_success "logrotate configured for /var/log/syslog (max 50MB, 7 rotations)"
 
 # -----------------------------------
 # REQUIRED ENV VARS
@@ -66,53 +111,6 @@ else
 fi
 
 # -----------------------------------
-# LOG MANAGEMENT START
-# -----------------------------------
-log_step "Configuring log rotation and journal limits"
-
-# 1️ Limit systemd journal size
-sudo mkdir -p /etc/systemd/journald.conf.d
-sudo tee /etc/systemd/journald.conf.d/limits.conf >/dev/null <<EOF
-[Journal]
-SystemMaxUse=50M
-RuntimeMaxUse=50M
-EOF
-
-sudo systemctl daemon-reexec
-sudo systemctl restart systemd-journald
-log_success "systemd journal limits applied (SystemMaxUse=50M, RuntimeMaxUse=50M)"
-
-# 2️ Configure logrotate for syslog
-sudo tee /etc/logrotate.d/syslog >/dev/null <<EOF
-/var/log/syslog
-{
-    daily
-    rotate 7
-    size 50M
-    compress
-    missingok
-    notifempty
-    delaycompress
-    postrotate
-        /usr/lib/rsyslog/rsyslog-rotate || true
-    endscript
-}
-EOF
-
-sudo logrotate -f /etc/logrotate.d/syslog
-log_success "logrotate configured for /var/log/syslog (max 50MB, 7 rotations)"
-
-# 3️ Cleanup old logs immediately
-sudo journalctl --vacuum-size=50M
-sudo journalctl --vacuum-time=7d
-sudo rm -f /var/log/*.gz /var/log/*.[0-9] 2>/dev/null || true
-log_success "Old logs cleaned up"
-
-# -----------------------------------
-# LOG MANAGEMENT END
-# -----------------------------------
-
-# -----------------------------------
 # Verify OCR / PDF tools
 # -----------------------------------
 log_step "Verifying OCR and PDF tooling availability"
@@ -147,8 +145,6 @@ log_step "Cloning or updating repository"
 if [ -d "$APP_DIR" ]; then
     sudo chown -R $APP_USER:$APP_USER "$APP_DIR/.git"
     sudo chmod -R u+rwX "$APP_DIR/.git"
-
-    # Ensure entire app directory is owned by the app user
     sudo chown -R $APP_USER:$APP_USER "$APP_DIR"
 fi
 
@@ -187,28 +183,18 @@ if [ ! -d "$VENV_DIR" ]; then
     fi
 fi
 
-# Fix pip cache permissions
 sudo -u $APP_USER mkdir -p /home/$APP_USER/.cache/pip
 sudo chown -R $APP_USER:$APP_USER /home/$APP_USER/.cache
 
-# Activate venv
 source "$VENV_DIR/bin/activate"
-
-# Prevent pip from installing to user site packages
 export PIP_USER=no
-
-# Upgrade pip, wheel, setuptools in the venv as the correct user
 sudo -H -u $APP_USER "$VENV_DIR/bin/pip" install --upgrade --no-cache-dir pip wheel setuptools
-
-# Install all required Python packages including uvicorn, OpenCV, Camelot
 sudo -H -u $APP_USER "$VENV_DIR/bin/pip" install --upgrade --no-cache-dir -r requirements.txt uvicorn opencv-python camelot-py
-
 log_success "Python dependencies including camelot and OpenCV installed"
-
 deactivate
 
 # -----------------------------------
-# Environment file for systemd (SSM secrets only)
+# Environment file for systemd
 # -----------------------------------
 log_step "Writing environment file for systemd"
 if cat > "$ENV_FILE" <<EOF
@@ -292,7 +278,7 @@ fi
 systemctl status "$SERVICE_NAME" --no-pager || echo "Could not retrieve service status"
 
 # -----------------------------------
-# AWS SSM Agent (Snap) - last
+# AWS SSM Agent (Snap)
 # -----------------------------------
 log_step "Ensuring AWS SSM Agent is installed and running"
 if ! snap list | grep -q amazon-ssm-agent; then
