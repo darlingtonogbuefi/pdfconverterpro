@@ -1,6 +1,7 @@
 # infra_core_terraform\route53.tf
 
 # Look up the delegated public hosted zone in Route 53
+
 data "aws_route53_zone" "subdomain" {
   name         = var.subdomain_zone_name
   private_zone = false
