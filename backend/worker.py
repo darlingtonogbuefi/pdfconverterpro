@@ -6,7 +6,7 @@ import json
 import requests
 from backend.services.pdf_to_powerpoint import convert_pdf_to_ppt
 from backend.utils.s3_utils import download_file, upload_file_to_s3
-from backend.core.config import AWS_REGION, SQS_QUEUE_URL, FRONTEND_SQS_QUEUE_URL, BACKEND_URL
+from backend.core.config import AWS_REGION, SQS_QUEUE_URL, FRONTEND_SQS_QUEUE_URL, VITE_BACKEND_URL
 import os
 import time
 import shutil
@@ -128,7 +128,7 @@ while True:
             # --------------------------
             try:
                 requests.post(
-                    f"{BACKEND_URL}/api/jobs/{job_id}/update",
+                    f"{VITE_BACKEND_URL}/api/jobs/{job_id}/update",
                     json={"status": "success", "result_url": presigned_url},
                     timeout=10
                 )
@@ -152,7 +152,7 @@ while True:
             # Update backend JOB_STORE on failure
             try:
                 requests.post(
-                    f"{BACKEND_URL}/api/jobs/{job_id}/update",
+                    f"{VITE_BACKEND_URL}/api/jobs/{job_id}/update",
                     json={"status": "failed", "error": str(e)},
                     timeout=10
                 )
