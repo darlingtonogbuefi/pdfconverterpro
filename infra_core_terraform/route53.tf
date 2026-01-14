@@ -1,6 +1,5 @@
 # infra_core_terraform\route53.tf
 
-
 # Look up the delegated public hosted zone in Route 53
 data "aws_route53_zone" "subdomain" {
   name         = var.subdomain_zone_name
@@ -10,7 +9,7 @@ data "aws_route53_zone" "subdomain" {
 # Alias A record → CloudFront
 resource "aws_route53_record" "cloudfront_a" {
   zone_id = data.aws_route53_zone.subdomain.zone_id
-  name    = "@"  # Changed from var.subdomain_zone_name to "@" for apex record
+  name    = var.subdomain_zone_name
   type    = "A"
 
   alias {
@@ -23,7 +22,7 @@ resource "aws_route53_record" "cloudfront_a" {
 # Alias AAAA record → CloudFront (IPv6)
 resource "aws_route53_record" "cloudfront_aaaa" {
   zone_id = data.aws_route53_zone.subdomain.zone_id
-  name    = "@"  # Changed from var.subdomain_zone_name to "@" for apex record
+  name    = var.subdomain_zone_name
   type    = "AAAA"
 
   alias {
