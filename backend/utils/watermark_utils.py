@@ -6,6 +6,8 @@ from reportlab.lib.utils import ImageReader
 from PIL import Image, ImageDraw, ImageFont
 import io
 from reportlab.lib import colors
+import warnings
+import os
 
 from backend.schemas.pdf_watermark import (
     GridOptions,
@@ -110,8 +112,16 @@ def _draw_single(
             g = int(g * factor)
             b = int(b * factor)
 
-        # Load font
-        font = ImageFont.truetype(font_name, font_size)
+        # Attempt to load font, fallback if not found
+        try:
+            if os.path.isfile(font_name):
+                font = ImageFont.truetype(font_name, font_size)
+            else:
+                # Try system fonts
+                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
+        except OSError:
+            warnings.warn(f"Cannot open font '{font_name}', using default PIL font.")
+            font = ImageFont.load_default()
 
         # Get bounding box
         bbox = font.getbbox(watermark.text)  # returns (x0, y0, x1, y1)

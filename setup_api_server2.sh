@@ -49,6 +49,7 @@ apt-get install -y \
     python3 \
     python3-venv \
     python3-pip \
+    fonts-dejavu-core \
     git \
     snapd \
     libgl1 \

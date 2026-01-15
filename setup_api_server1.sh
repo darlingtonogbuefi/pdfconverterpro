@@ -51,6 +51,7 @@ apt-get install -y \
     python3-venv \
     python3-pip \
     git \
+    fonts-dejavu-core \
     snapd \
     libgl1 \
     libglib2.0-0 \
