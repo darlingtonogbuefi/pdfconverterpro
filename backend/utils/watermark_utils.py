@@ -24,7 +24,7 @@ def draw_watermarks(
     watermark: Union[TextWatermark, ImageWatermark],
     placement: Union[GridOptions, InsertOptions],
     image: str | None,
-    opacity: float = 0.7,
+    opacity: float = 0.4,
 ):
     """
     Draw watermarks on the canvas with optional opacity.
@@ -81,7 +81,7 @@ def _draw_single(
     rotate: bool,
     cell_width: float,
     cell_height: float,
-    opacity: float = 0.7,
+    opacity: float = 0.4,
 ):
     canvas.saveState()
     canvas.translate(x, y)
