@@ -6,7 +6,6 @@ from reportlab.lib.utils import ImageReader
 from PIL import Image, ImageDraw, ImageFont
 import io
 from reportlab.lib import colors
-import os
 
 from backend.schemas.pdf_watermark import (
     GridOptions,
@@ -14,35 +13,6 @@ from backend.schemas.pdf_watermark import (
     TextWatermark,
     ImageWatermark,
 )
-
-
-# Common Linux font fallbacks (no new dependency required)
-FONT_FALLBACKS = [
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-]
-
-
-def _load_font_safe(font_name: str, font_size: int) -> ImageFont.FreeTypeFont:
-    """
-    Safely load a font for PIL text rendering.
-    Accepts either a TTF path or a logical name.
-    Never raises OSError.
-    """
-    if font_name and os.path.isfile(font_name):
-        try:
-            return ImageFont.truetype(font_name, font_size)
-        except OSError:
-            pass
-
-    for path in FONT_FALLBACKS:
-        if os.path.isfile(path):
-            try:
-                return ImageFont.truetype(path, font_size)
-            except OSError:
-                continue
-
-    return ImageFont.load_default()
 
 
 def draw_watermarks(
@@ -117,113 +87,83 @@ def _draw_single(
     if rotate:
         canvas.rotate(getattr(watermark, "angle", 0))
 
-    # =========================
-    # TEXT WATERMARK
-    # =========================
     if watermark.type == "text":
-        font_name = getattr(watermark, "font_name", None)
-        font_size = getattr(watermark, "font_size", 60)
+        # Render text as an RGBA image to support opacity
+        font_name = getattr(watermark, "font_name", "arial.ttf")
+        font_size = getattr(watermark, "font_size", 20)
         text_color = getattr(watermark, "color", "black")
 
-        # Convert color to RGB and ensure dark text
+        # Convert color to RGB tuple
         try:
-            c = colors.toColor(text_color)
-            r, g, b = int(c.red * 255), int(c.green * 255), int(c.blue * 255)
-            # Force dark text for better visibility
-            r = min(r, 50)
-            g = min(g, 50)
-            b = min(b, 50)
+            if isinstance(text_color, str):
+                c = colors.toColor(text_color)
+                r, g, b = int(c.red * 255), int(c.green * 255), int(c.blue * 255)
+            else:
+                r, g, b = int(text_color.red * 255), int(text_color.green * 255), int(text_color.blue * 255)
         except Exception:
             r, g, b = 0, 0, 0
 
-        # Load font safely
-        font = _load_font_safe(font_name, font_size)
+        # Darken default color if it's black or None
+        if text_color in (None, "black"):
+            factor = 0.2  # 0 = black, 1 = original
+            r = int(r * factor)
+            g = int(g * factor)
+            b = int(b * factor)
 
-        # =========================
-        # SUPERSAMPLING FOR SHARPNESS
-        # =========================
-        scale_factor = 4  # supersample 4x
-        bbox = font.getbbox(watermark.text)
+        # Load font
+        font = ImageFont.truetype(font_name, font_size)
+
+        # Get bounding box
+        bbox = font.getbbox(watermark.text)  # returns (x0, y0, x1, y1)
         x0, y0, x1, y1 = bbox
-        text_width = max(1, x1 - x0)
-        text_height = max(1, y1 - y0)
+        text_width = x1 - x0
+        text_height = y1 - y0
 
-        img = Image.new(
-            "RGBA",
-            (text_width * scale_factor, text_height * scale_factor),
-            (0, 0, 0, 0),
-        )
+        # Create image with full text including baseline offset
+        img = Image.new("RGBA", (text_width, text_height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
+        # Ensure minimum alpha for visibility
+        alpha = int(255 * max(opacity, 0.5))
+        draw.text((-x0, -y0), watermark.text, font=font, fill=(r, g, b, alpha))
 
-        alpha = max(int(255 * opacity), 150)
-        # draw text at high res
-        draw.text(
-            (-x0 * scale_factor, -y0 * scale_factor),
-            watermark.text,
-            font=_load_font_safe(font_name, font_size * scale_factor),
-            fill=(r, g, b, alpha),
-        )
+        # Convert to ReportLab Image
+        img_byte_arr = io.BytesIO()
+        img.save(img_byte_arr, format="PNG")
+        img_byte_arr.seek(0)
+        rl_img = ImageReader(img_byte_arr)
 
-        # Downscale for smoothness
-        img = img.resize((text_width, text_height), resample=Image.LANCZOS)
-
-        # Convert to ReportLab image
-        buffer = io.BytesIO()
-        img.save(buffer, format="PNG")
-        buffer.seek(0)
-        rl_img = ImageReader(buffer)
-
-        # Scale to cell
+        # Scale to cell if needed
         max_w = cell_width * 0.8
         max_h = cell_height * 0.8
-        scale = min(max_w / text_width, max_h / text_height, 1.0)
-
+        scale_w = max_w / text_width
+        scale_h = max_h / text_height
+        scale = min(scale_w, scale_h, 1.0)
         draw_w = text_width * scale
         draw_h = text_height * scale
 
-        canvas.drawImage(
-            rl_img,
-            -draw_w / 2,
-            -draw_h / 2,
-            width=draw_w,
-            height=draw_h,
-            mask="auto",
-        )
+        # Draw centered
+        canvas.drawImage(rl_img, -draw_w / 2, -draw_h / 2, width=draw_w, height=draw_h, mask="auto")
 
-    # =========================
-    # IMAGE WATERMARK
-    # =========================
     elif watermark.type == "image" and image:
+        # Open image and apply opacity
         pil_img = Image.open(image).convert("RGBA")
-
         alpha = pil_img.split()[3].point(lambda p: int(p * opacity))
         pil_img.putalpha(alpha)
 
-        buffer = io.BytesIO()
-        pil_img.save(buffer, format="PNG")
-        buffer.seek(0)
-        rl_img = ImageReader(buffer)
+        img_byte_arr = io.BytesIO()
+        pil_img.save(img_byte_arr, format="PNG")
+        img_byte_arr.seek(0)
+        rl_img = ImageReader(img_byte_arr)
 
         iw, ih = pil_img.size
         max_iw = cell_width * 0.8
         max_ih = cell_height * 0.8
-
-        scale = min(
-            max_iw / iw,
-            max_ih / ih,
-            getattr(watermark, "image_scale", 1.0),
-        )
-
+        scale_w = max_iw / iw
+        scale_h = max_ih / ih
+        scale = min(scale_w, scale_h, getattr(watermark, "image_scale", 1.0))
         iw *= scale
         ih *= scale
 
-        canvas.drawImage(
-            rl_img,
-            -iw / 2,
-            -ih / 2,
-            width=iw,
-            height=ih,
-            mask="auto",
-        )
+        canvas.drawImage(rl_img, -iw / 2, -ih / 2, width=iw, height=ih, mask="auto")
 
     canvas.restoreState()
