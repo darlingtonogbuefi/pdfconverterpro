@@ -24,7 +24,7 @@ def draw_watermarks(
     watermark: Union[TextWatermark, ImageWatermark],
     placement: Union[GridOptions, InsertOptions],
     image: str | None,
-    opacity: float = 0.4,
+    opacity: float = 0.3,
 ):
     """
     Draw watermarks on the canvas with optional opacity.
@@ -81,7 +81,7 @@ def _draw_single(
     rotate: bool,
     cell_width: float,
     cell_height: float,
-    opacity: float = 0.4,
+    opacity: float = 0.3,
 ):
     canvas.saveState()
     canvas.translate(x, y)
@@ -133,7 +133,7 @@ def _draw_single(
         img = Image.new("RGBA", (text_width, text_height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
         # Ensure minimum alpha for visibility
-        alpha = int(255 * max(opacity, 0.8))
+        alpha = int(255 * max(opacity, 0.9))
         draw.text((-x0, -y0), watermark.text, font=font, fill=(r, g, b, alpha))
 
         # Convert to ReportLab Image
