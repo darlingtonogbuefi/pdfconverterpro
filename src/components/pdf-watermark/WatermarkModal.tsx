@@ -214,7 +214,7 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
                     opacity,
                     lineHeight: 1,
                     whiteSpace: "nowrap",
-                    transform: `rotate(${tile === "diagonal" ? 45 : 0}deg)`,
+                    transform: `rotate(${tile === "diagonal" ? -45 : 0}deg)`,
                   }}
                 >
                   {previewText}
