@@ -25,7 +25,7 @@ export default function PdfWatermarker({
   watermarkText,
   watermarkFile,
   gridOptions,
-  textOpacity = 0.3,
+  textOpacity = 0.5,   // increased default for better visibility
   imageOpacity = 0.5,
   onComplete,
 }: Props) {
@@ -43,7 +43,7 @@ export default function PdfWatermarker({
                 text: watermarkText,
                 font: "Helvetica",
                 font_size: 40,
-                color: "#808080",
+                color: "#000000", // fully black for maximum visibility
                 opacity: textOpacity,
                 angle: 45,
                 save_as_image: false,
@@ -84,4 +84,3 @@ export default function PdfWatermarker({
     </Button>
   );
 }
-
