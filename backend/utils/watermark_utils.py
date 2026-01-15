@@ -29,14 +29,12 @@ def _load_font_safe(font_name: str, font_size: int) -> ImageFont.FreeTypeFont:
     Accepts either a TTF path or a logical name.
     Never raises OSError.
     """
-    # If a real file path was provided
     if font_name and os.path.isfile(font_name):
         try:
             return ImageFont.truetype(font_name, font_size)
         except OSError:
             pass
 
-    # Try common system fonts
     for path in FONT_FALLBACKS:
         if os.path.isfile(path):
             try:
@@ -44,7 +42,6 @@ def _load_font_safe(font_name: str, font_size: int) -> ImageFont.FreeTypeFont:
             except OSError:
                 continue
 
-    # Absolute last resort
     return ImageFont.load_default()
 
 
@@ -125,41 +122,50 @@ def _draw_single(
     # =========================
     if watermark.type == "text":
         font_name = getattr(watermark, "font_name", None)
-        font_size = getattr(watermark, "font_size", 20)
+        font_size = getattr(watermark, "font_size", 60)
         text_color = getattr(watermark, "color", "black")
 
         # Convert color to RGB and ensure dark text
         try:
             c = colors.toColor(text_color)
             r, g, b = int(c.red * 255), int(c.green * 255), int(c.blue * 255)
-            # Force dark text
+            # Force dark text for better visibility
             r = min(r, 50)
             g = min(g, 50)
             b = min(b, 50)
         except Exception:
             r, g, b = 0, 0, 0
 
-        # Load font safely (NO crashes)
+        # Load font safely
         font = _load_font_safe(font_name, font_size)
 
-        # Measure text
+        # =========================
+        # SUPERSAMPLING FOR SHARPNESS
+        # =========================
+        scale_factor = 4  # supersample 4x
         bbox = font.getbbox(watermark.text)
         x0, y0, x1, y1 = bbox
         text_width = max(1, x1 - x0)
         text_height = max(1, y1 - y0)
 
-        # Create RGBA image
-        img = Image.new("RGBA", (text_width, text_height), (0, 0, 0, 0))
+        img = Image.new(
+            "RGBA",
+            (text_width * scale_factor, text_height * scale_factor),
+            (0, 0, 0, 0),
+        )
         draw = ImageDraw.Draw(img)
 
-        # Ensure minimum alpha for visibility
         alpha = max(int(255 * opacity), 150)
+        # draw text at high res
         draw.text(
-            (-x0, -y0),
+            (-x0 * scale_factor, -y0 * scale_factor),
             watermark.text,
-            font=font,
+            font=_load_font_safe(font_name, font_size * scale_factor),
             fill=(r, g, b, alpha),
         )
+
+        # Downscale for smoothness
+        img = img.resize((text_width, text_height), resample=Image.LANCZOS)
 
         # Convert to ReportLab image
         buffer = io.BytesIO()

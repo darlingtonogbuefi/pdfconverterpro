@@ -42,7 +42,7 @@ export default function PdfWatermarker({
                 type: "text",
                 text: watermarkText,
                 font: "Helvetica",
-                font_size: 40,
+                font_size: 60,
                 color: "#000000", // fully black for maximum visibility
                 opacity: textOpacity,
                 angle: 45,
