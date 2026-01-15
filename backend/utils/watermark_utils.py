@@ -128,10 +128,14 @@ def _draw_single(
         font_size = getattr(watermark, "font_size", 20)
         text_color = getattr(watermark, "color", "black")
 
-        # Convert color to RGB
+        # Convert color to RGB and ensure dark text
         try:
             c = colors.toColor(text_color)
             r, g, b = int(c.red * 255), int(c.green * 255), int(c.blue * 255)
+            # Force dark text
+            r = min(r, 50)
+            g = min(g, 50)
+            b = min(b, 50)
         except Exception:
             r, g, b = 0, 0, 0
 
@@ -148,7 +152,8 @@ def _draw_single(
         img = Image.new("RGBA", (text_width, text_height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
 
-        alpha = int(255 * opacity)
+        # Ensure minimum alpha for visibility
+        alpha = max(int(255 * opacity), 150)
         draw.text(
             (-x0, -y0),
             watermark.text,
