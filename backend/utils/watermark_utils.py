@@ -133,9 +133,9 @@ def _draw_single(
             c = colors.toColor(text_color)
             r, g, b = int(c.red * 255), int(c.green * 255), int(c.blue * 255)
             # Force dark text
-            r = min(r, 30)
-            g = min(g, 30)
-            b = min(b, 30)
+            r = min(r, 100)
+            g = min(g, 100)
+            b = min(b, 100)
         except Exception:
             r, g, b = 0, 0, 0
 
