@@ -1,5 +1,7 @@
 # infra_core_terraform\ec2.tf
 
+# infra_core_terraform\ec2.tf
+
 # ============================
 # Amazon Linux AMI (Bastion)
 # ============================
@@ -45,21 +47,6 @@ resource "aws_key_pair" "ec2" {
 }
 
 # ============================
-# Security Groups (if not defined elsewhere)
-# ============================
-resource "aws_security_group" "api_sg" {
-  name        = "${var.project_name}-api-sg"
-  description = "Security group for API server 1"
-  vpc_id      = aws_vpc.main.id
-}
-
-resource "aws_security_group" "worker_sg" {
-  name        = "${var.project_name}-worker-sg"
-  description = "Security group for API server 2"
-  vpc_id      = aws_vpc.main.id
-}
-
-# ============================
 # API EC2 (Ubuntu LTS) - api_server1
 # ============================
 resource "aws_instance" "api_server1" {
@@ -67,7 +54,7 @@ resource "aws_instance" "api_server1" {
   instance_type          = var.instance_type
   key_name               = aws_key_pair.ec2.key_name
   iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
-  vpc_security_group_ids = [aws_security_group.api_sg.id]
+  vpc_security_group_ids = [aws_security_group.api_server1_sg.id]  # ✅ corrected
   subnet_id              = aws_subnet.private_1.id
 
   tags = {
@@ -87,8 +74,6 @@ resource "aws_instance" "api_server1" {
     volume_type           = "gp3"
     delete_on_termination = true
   }
-
-
 }
 
 # ============================
@@ -99,7 +84,7 @@ resource "aws_instance" "api_server2" {
   instance_type          = var.instance_type
   key_name               = aws_key_pair.ec2.key_name
   iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
-  vpc_security_group_ids = [aws_security_group.worker_sg.id]
+  vpc_security_group_ids = [aws_security_group.api_server2_sg.id]  # ✅ corrected
   subnet_id              = aws_subnet.private_2.id
 
   tags = {
@@ -119,6 +104,4 @@ resource "aws_instance" "api_server2" {
     volume_type           = "gp3"
     delete_on_termination = true
   }
-
- 
 }
