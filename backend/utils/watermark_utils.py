@@ -15,11 +15,13 @@ from backend.schemas.pdf_watermark import (
     ImageWatermark,
 )
 
+
 # Common Linux font fallbacks (no new dependency required)
 FONT_FALLBACKS = [
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
 ]
+
 
 def _load_font_safe(font_name: str, font_size: int) -> ImageFont.FreeTypeFont:
     """
@@ -44,6 +46,7 @@ def _load_font_safe(font_name: str, font_size: int) -> ImageFont.FreeTypeFont:
 
     # Absolute last resort
     return ImageFont.load_default()
+
 
 def draw_watermarks(
     canvas: Canvas,
@@ -99,6 +102,7 @@ def draw_watermarks(
                     opacity=opacity,
                 )
 
+
 def _draw_single(
     canvas: Canvas,
     x: float,
@@ -129,15 +133,14 @@ def _draw_single(
             c = colors.toColor(text_color)
             r, g, b = int(c.red * 255), int(c.green * 255), int(c.blue * 255)
             # Force dark text
-            r = min(r, 50)
-            g = min(g, 50)
-            b = min(b, 50)
+            r = min(r, 10)
+            g = min(g, 10)
+            b = min(b, 10)
         except Exception:
             r, g, b = 0, 0, 0
 
-        # Supersampling factor for sharp text
-        scale_factor = 4
-        font = _load_font_safe(font_name, font_size * scale_factor)
+        # Load font safely (NO crashes)
+        font = _load_font_safe(font_name, font_size)
 
         # Measure text
         bbox = font.getbbox(watermark.text)
@@ -145,21 +148,18 @@ def _draw_single(
         text_width = max(1, x1 - x0)
         text_height = max(1, y1 - y0)
 
-        # Create high-resolution RGBA image
+        # Create RGBA image
         img = Image.new("RGBA", (text_width, text_height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
 
-        # Draw fully opaque text
-        draw.text((-x0, -y0), watermark.text, font=font, fill=(r, g, b, 255))
-
-        # Downscale image to target size
-        target_width = int(text_width / scale_factor)
-        target_height = int(text_height / scale_factor)
-        img = img.resize((target_width, target_height), Image.LANCZOS)
-
-        # Apply opacity
-        alpha = int(255 * opacity)
-        img.putalpha(alpha)
+        # Ensure minimum alpha for visibility
+        alpha = max(int(255 * opacity), 150)
+        draw.text(
+            (-x0, -y0),
+            watermark.text,
+            font=font,
+            fill=(r, g, b, alpha),
+        )
 
         # Convert to ReportLab image
         buffer = io.BytesIO()
@@ -170,10 +170,10 @@ def _draw_single(
         # Scale to cell
         max_w = cell_width * 0.8
         max_h = cell_height * 0.8
-        scale = min(max_w / target_width, max_h / target_height, 1.0)
+        scale = min(max_w / text_width, max_h / text_height, 1.0)
 
-        draw_w = target_width * scale
-        draw_h = target_height * scale
+        draw_w = text_width * scale
+        draw_h = text_height * scale
 
         canvas.drawImage(
             rl_img,
