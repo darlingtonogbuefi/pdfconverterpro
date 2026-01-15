@@ -133,7 +133,7 @@ def _draw_single(
         img = Image.new("RGBA", (text_width, text_height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
         # Ensure minimum alpha for visibility
-        alpha = int(255 * max(opacity, 0.5))
+        alpha = int(255 * max(opacity, 0.8))
         draw.text((-x0, -y0), watermark.text, font=font, fill=(r, g, b, alpha))
 
         # Convert to ReportLab Image
