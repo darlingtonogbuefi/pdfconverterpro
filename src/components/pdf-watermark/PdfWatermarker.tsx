@@ -52,7 +52,7 @@ export default function PdfWatermarker({
             : {
                 type: "image",
                 opacity: imageOpacity,
-                angle: 0,
+                angle: 45,
                 save_as_image: false,
                 dpi: 300,
               },
