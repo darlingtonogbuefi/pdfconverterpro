@@ -1,9 +1,8 @@
-#  backend\services\pdf_watermark.py
+# backend\services\pdf_watermark.py
 
 import pypdf
 from tempfile import NamedTemporaryFile
 from typing import Union
-from reportlab.lib.colors import HexColor
 from reportlab.pdfgen import canvas
 
 from backend.schemas.pdf_watermark import (
@@ -36,16 +35,9 @@ def add_watermark_to_pdf(
             with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
                 c = canvas.Canvas(tmp.name, pagesize=size)
 
-                if watermark.type == "text":
-                    c.setFont(watermark.font, watermark.font_size)
-                    c.setFillColor(
-                        HexColor(watermark.color),
-                        alpha=watermark.opacity,
-                    )
-                else:
-                    c.setFillAlpha(watermark.opacity)
-                    c.setStrokeAlpha(watermark.opacity)
-
+                # For text watermarks, font and color are handled inside draw_watermarks()
+                # For image watermarks, opacity is handled inside draw_watermarks()
+                
                 draw_watermarks(
                     canvas=c,
                     width=size[0],
@@ -53,17 +45,21 @@ def add_watermark_to_pdf(
                     watermark=watermark,
                     placement=placement,
                     image=image_path,
+                    opacity=getattr(watermark, "opacity", 0.2),
                 )
 
                 c.save()
 
-                if watermark.save_as_image:
-                    convert_content_to_images(tmp.name, watermark.dpi)
+                # Convert PDF to images if requested
+                if getattr(watermark, "save_as_image", False):
+                    convert_content_to_images(tmp.name, getattr(watermark, "dpi", 150))
 
                 processed[size] = pypdf.PdfReader(tmp.name)
 
+        # Merge the watermark onto the page
         page.merge_page(processed[size].pages[0])
         writer.add_page(page)
 
+    # Write final output
     with open(output_pdf, "wb") as f:
         writer.write(f)
