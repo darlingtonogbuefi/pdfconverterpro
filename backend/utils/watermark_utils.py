@@ -15,28 +15,20 @@ from backend.schemas.pdf_watermark import (
     ImageWatermark,
 )
 
-
 # Common Linux font fallbacks (no new dependency required)
 FONT_FALLBACKS = [
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
 ]
 
-
 def _load_font_safe(font_name: str, font_size: int) -> ImageFont.FreeTypeFont:
-    """
-    Safely load a font for PIL text rendering.
-    Accepts either a TTF path or a logical name.
-    Never raises OSError.
-    """
-    # If a real file path was provided
+    """Safely load a font for PIL text rendering."""
     if font_name and os.path.isfile(font_name):
         try:
             return ImageFont.truetype(font_name, font_size)
         except OSError:
             pass
 
-    # Try common system fonts
     for path in FONT_FALLBACKS:
         if os.path.isfile(path):
             try:
@@ -44,7 +36,6 @@ def _load_font_safe(font_name: str, font_size: int) -> ImageFont.FreeTypeFont:
             except OSError:
                 continue
 
-    # Absolute last resort
     return ImageFont.load_default()
 
 
@@ -57,25 +48,11 @@ def draw_watermarks(
     image: str | None,
     opacity: float = 0.2,
 ):
-    """
-    Draw watermarks on the canvas with optional opacity.
-    opacity: 0.0 (transparent) to 1.0 (fully visible)
-    """
+    """Draw watermarks on the canvas with optional opacity."""
     if isinstance(placement, InsertOptions):
         x = placement.x * width
         y = placement.y * height
-
-        _draw_single(
-            canvas=canvas,
-            x=x,
-            y=y,
-            watermark=watermark,
-            image=image,
-            rotate=False,
-            cell_width=width,
-            cell_height=height,
-            opacity=opacity,
-        )
+        _draw_single(canvas, x, y, watermark, image, False, width, height, opacity)
         return
 
     if isinstance(placement, GridOptions):
@@ -86,21 +63,13 @@ def draw_watermarks(
             for row in range(placement.vertical_boxes):
                 x = (col + 0.5) * step_x
                 y = (row + 0.5) * step_y
-
                 if placement.tile_type == "diagonal":
                     y += (col % 2) * (step_y / 2)
 
-                _draw_single(
-                    canvas=canvas,
-                    x=x,
-                    y=y,
-                    watermark=watermark,
-                    image=image,
-                    rotate=(placement.tile_type == "diagonal"),
-                    cell_width=step_x,
-                    cell_height=step_y,
-                    opacity=opacity,
-                )
+                _draw_single(canvas, x, y, watermark, image,
+                             rotate=(placement.tile_type == "diagonal"),
+                             cell_width=step_x, cell_height=step_y,
+                             opacity=opacity)
 
 
 def _draw_single(
@@ -120,46 +89,42 @@ def _draw_single(
     if rotate:
         canvas.rotate(getattr(watermark, "angle", 0))
 
-    # =========================
+    # -----------------------
     # TEXT WATERMARK
-    # =========================
+    # -----------------------
     if watermark.type == "text":
         font_name = getattr(watermark, "font_name", None)
         font_size = getattr(watermark, "font_size", 20)
         text_color = getattr(watermark, "color", "black")
 
-        # Convert color to RGB and ensure dark text
+        # Convert color to RGB
         try:
             c = colors.toColor(text_color)
             r, g, b = int(c.red * 255), int(c.green * 255), int(c.blue * 255)
-            # Force dark text
-            r = min(r, 10)
-            g = min(g, 10)
-            b = min(b, 10)
         except Exception:
             r, g, b = 0, 0, 0
 
-        # Load font safely (NO crashes)
-        font = _load_font_safe(font_name, font_size)
+        # Supersampling for sharpness
+        scale_factor = 4
+        font = _load_font_safe(font_name, font_size * scale_factor)
 
-        # Measure text
         bbox = font.getbbox(watermark.text)
         x0, y0, x1, y1 = bbox
         text_width = max(1, x1 - x0)
         text_height = max(1, y1 - y0)
 
-        # Create RGBA image
+        # Create high-res RGBA image
         img = Image.new("RGBA", (text_width, text_height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
 
-        # Ensure minimum alpha for visibility
-        alpha = max(int(255 * opacity), 150)
-        draw.text(
-            (-x0, -y0),
-            watermark.text,
-            font=font,
-            fill=(r, g, b, alpha),
-        )
+        # Draw text with proper alpha
+        alpha = max(int(255 * opacity), 50)  # minimum alpha to ensure visibility
+        draw.text((-x0, -y0), watermark.text, font=font, fill=(r, g, b, alpha))
+
+        # Downscale for smooth text
+        target_width = int(text_width / scale_factor)
+        target_height = int(text_height / scale_factor)
+        img = img.resize((target_width, target_height), Image.LANCZOS)
 
         # Convert to ReportLab image
         buffer = io.BytesIO()
@@ -167,13 +132,13 @@ def _draw_single(
         buffer.seek(0)
         rl_img = ImageReader(buffer)
 
-        # Scale to cell
+        # Scale to fit cell
         max_w = cell_width * 0.8
         max_h = cell_height * 0.8
-        scale = min(max_w / text_width, max_h / text_height, 1.0)
+        scale = min(max_w / target_width, max_h / target_height, 1.0)
 
-        draw_w = text_width * scale
-        draw_h = text_height * scale
+        draw_w = target_width * scale
+        draw_h = target_height * scale
 
         canvas.drawImage(
             rl_img,
@@ -181,15 +146,14 @@ def _draw_single(
             -draw_h / 2,
             width=draw_w,
             height=draw_h,
-            mask="auto",
+            mask="auto"
         )
 
-    # =========================
+    # -----------------------
     # IMAGE WATERMARK
-    # =========================
+    # -----------------------
     elif watermark.type == "image" and image:
         pil_img = Image.open(image).convert("RGBA")
-
         alpha = pil_img.split()[3].point(lambda p: int(p * opacity))
         pil_img.putalpha(alpha)
 
@@ -217,7 +181,7 @@ def _draw_single(
             -ih / 2,
             width=iw,
             height=ih,
-            mask="auto",
+            mask="auto"
         )
 
     canvas.restoreState()
