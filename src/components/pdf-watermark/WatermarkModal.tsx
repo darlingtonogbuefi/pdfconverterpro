@@ -94,7 +94,7 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
             : {
                 type: "image",
                 opacity,
-                angle: 0,
+                angle: 45,
                 save_as_image: false,
                 dpi: 300,
               },
@@ -126,7 +126,7 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
   };
 
   const previewColor = hexToRgba("#999999", 1);
-  const previewBrightness = 1 + (1 - opacity) * 0.7;
+  const previewBrightness = 1 + (1 - opacity) * 0.8;
 
   // Preview container classes
   const imagePreviewClass =
