@@ -365,6 +365,7 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
               <label className="w-[12ch] whitespace-nowrap">Horizontal Boxes:</label>
               <input
                 type="number"
+                min={1}
                 max={15}
                 value={horizontalBoxes}
                 onChange={(e) => setHorizontalBoxes(+e.target.value)}
