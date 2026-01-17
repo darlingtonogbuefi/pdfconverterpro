@@ -1,5 +1,4 @@
-//  src/components/pdf-stamp/PdfStamper.tsx
-
+// src/components/pdf-stamp/PdfStamper.tsx
 
 import { useEffect, useRef } from "react";
 
@@ -8,13 +7,12 @@ type Props = {
 };
 
 export default function PdfStamper({ fileUrl }: Props) {
-  const viewerRef = useRef<HTMLDivElement>(null); // Create a reference to the container where the PDF viewer will be loaded.
+  const viewerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const container = viewerRef.current; // Access the container div
-    const { NutrientViewer } = window as any; // Access the NutrientViewer SDK from the global window object.
+    const container = viewerRef.current;
+    const { NutrientViewer } = window as any;
 
-    // Check if the container or NutrientViewer is not loaded properly
     if (!container || !NutrientViewer) {
       console.error("NutrientViewer SDK not loaded");
       return;
@@ -23,25 +21,24 @@ export default function PdfStamper({ fileUrl }: Props) {
     let instance: any;
     let originalDefaultItems: any[] = [];
 
-    // Load the PDF into the viewer
     NutrientViewer.load({
-      container, // The container where the PDF will be rendered
-      document: fileUrl, // The URL to the PDF file
+      container,
+      document: fileUrl,
       ui: {
-        showToolbar: true, // Show toolbar with custom buttons
-        showStampButton: true, // Show the custom "stamp" button in the toolbar
-        showDrawButton: false, // Remove the "draw" button from the toolbar
-        showSignButton: false, // Remove the "sign" button from the toolbar
+        showToolbar: true,
+        showStampButton: true,  // keep existing stamp icon button
+        showDrawButton: false,
+        showSignButton: false,
       },
     }).then((viewerInstance: any) => {
       instance = viewerInstance;
 
-      // 🔹 Auto-open stamp tool when the document is loaded
+      // 🔹 Auto-open stamp tool on load
       instance.setViewState((viewState: any) =>
-        viewState.set("interactionMode", NutrientViewer.InteractionMode.STAMP_PICKER) // Set the viewer to stamp mode on load
+        viewState.set("interactionMode", NutrientViewer.InteractionMode.STAMP_PICKER)
       );
 
-      // 🔹 Enable undo/redo history in the PDF viewer
+      // 🔹 Enable history
       instance.history.enable();
 
       // 🔹 Custom center buttons
@@ -49,7 +46,7 @@ export default function PdfStamper({ fileUrl }: Props) {
         type: "custom",
         id: "go-back",
         title: "Back",
-        onPress: () => window.history.back(), // Go back to the previous page
+        onPress: () => window.history.back(),
       };
 
       const undoButton = {
@@ -76,19 +73,24 @@ export default function PdfStamper({ fileUrl }: Props) {
         },
       };
 
-      const previewButton = {
+      // 🔹 Text Stamp PDF button (replaces Preview PDF)
+      const textStampButton = {
         type: "custom",
-        id: "preview",
-        title: "Preview PDF",
-        onPress: async () => {
-          const pdfBuffer = await instance.exportPDF();
-          const blob = new Blob([pdfBuffer], { type: "application/pdf" });
-          const url = URL.createObjectURL(blob);
-          window.open(url, "_blank"); // Open the previewed PDF in a new tab
+        id: "text-stamp",
+        title: "Stamp PDF",
+        onPress: () => {
+          try {
+            // Launch stamp popup for text stamps
+            instance.setViewState((viewState: any) =>
+              viewState.set("interactionMode", NutrientViewer.InteractionMode.STAMP_PICKER)
+            );
+          } catch (err) {
+            console.error("Error opening stamp tool:", err);
+          }
         },
       };
 
-      // 🔹 Helper: Build toolbar by arranging the default toolbar items and custom buttons
+      // 🔹 Helper: Build toolbar with custom buttons
       const buildToolbar = (defaultItems: any[]) => {
         const half = Math.ceil(defaultItems.length / 2);
         const leftItems = defaultItems.slice(0, half);
@@ -100,45 +102,42 @@ export default function PdfStamper({ fileUrl }: Props) {
           backButton,
           undoButton,
           redoButton,
-          previewButton,
+          textStampButton, // new Text Stamp PDF button
           { type: "spacer" },
           ...rightItems,
         ];
       };
 
-      // 🔹 Refresh the toolbar whenever it needs to be updated
+      // 🔹 Refresh toolbar
       const refreshToolbar = () => {
         instance.setToolbarItems(buildToolbar(originalDefaultItems));
       };
 
       // 🔹 Initial toolbar setup
       instance.setToolbarItems((defaultItems: any[]) => {
-        originalDefaultItems = [...defaultItems]; // Save the original toolbar items
-        return buildToolbar(defaultItems); // Return the custom toolbar
+        originalDefaultItems = [...defaultItems];
+        return buildToolbar(defaultItems);
       });
 
-      // 🔹 Update the toolbar whenever annotations change (for example, after stamping)
+      // 🔹 Update toolbar when annotations change
       instance.on("annotationsChanged", refreshToolbar);
     });
 
-    // Cleanup when component unmounts
+    // Cleanup
     return () => {
       if (instance) {
-        NutrientViewer.unload(container); // Unload the NutrientViewer when the component is unmounted
+        NutrientViewer.unload(container);
       }
     };
-  }, [fileUrl]); // Re-run the effect if the fileUrl changes
+  }, [fileUrl]);
 
-  // Render the viewer container
   return (
-    <div>
-      <div
-        ref={viewerRef} // Attach the viewerRef to the div where the PDF viewer will render
-        style={{
-          width: "100%", // Full width
-          height: "100vh", // Full viewport height
-        }}
-      />
-    </div>
+    <div
+      ref={viewerRef}
+      style={{
+        width: "100%",
+        height: "100vh",
+      }}
+    />
   );
 }

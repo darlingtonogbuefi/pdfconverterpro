@@ -3,7 +3,7 @@
 # infra_core_terraform\ec2.tf
 
 # ============================
-# Amazon Linux AMI (Bastion)
+# Amazon Linux 2023 AMI (x86_64) for Bastion
 # ============================
 data "aws_ami" "amazon_linux" {
   most_recent = true
@@ -11,14 +11,20 @@ data "aws_ami" "amazon_linux" {
 
   filter {
     name   = "name"
-    values = ["al2023-ami-*"]
+    values = ["al2023-ami-*-x86_64*"]
   }
 
   filter {
     name   = "virtualization-type"
     values = ["hvm"]
   }
+
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
+  }
 }
+
 
 # ============================
 # Ubuntu 22.04 LTS AMI API servers

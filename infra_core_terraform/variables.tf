@@ -139,11 +139,11 @@ variable "subdomain_zone_name" {
 variable "cloudfront_domain_name" {
   description = "CloudFront distribution domain name"
   type        = string
-  default     = "d26fc8ipd5b0p5.cloudfront.net"
+  default     = "d2bzhka0om0t17.cloudfront.net"
 }
 
 variable "alb_domain_name" {
   description = "The domain name of the ALB"
   type        = string
-  default     = "pdfconvertpro-alb-1749526466.us-east-1.elb.amazonaws.com"
+  default     = "pdfconvertpro-alb-555769446.us-east-1.elb.amazonaws.com"
 }

@@ -65,7 +65,7 @@ export default function PdfEditor({ fileUrl }: Props) {
       const textEditorButton = {
         type: "custom",
         id: "text-editor",
-        title: "Text Editor",
+        title: "Edit PDF",
         onPress: () => {
           instance.setViewState((viewState: any) =>
             viewState.set(
@@ -86,8 +86,8 @@ export default function PdfEditor({ fileUrl }: Props) {
           ...leftItems,
           { type: "spacer" },
           backButton,
-          previewButton,
           textEditorButton,
+          previewButton,
           { type: "spacer" },
           ...rightItems,
         ];

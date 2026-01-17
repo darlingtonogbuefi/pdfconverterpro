@@ -56,7 +56,10 @@ apt-get install -y \
     libglib2.0-0 \
     tesseract-ocr \
     poppler-utils \
-    ghostscript
+    ghostscript \
+    react-pdf \
+    pdfjs-dist
+
 
 snap set system refresh.retain=2
 log_success "System packages installed"

@@ -55,14 +55,6 @@ export default function PdfToolbar({
       </Button>
 
       <Button
-        className={getButtonClass('watermark')}
-        onClick={onWatermark}
-        style={{ lineHeight: '2.5rem' }}
-      >
-        Watermark
-      </Button>
-
-      <Button
         className={getButtonClass('undo')}
         onClick={onUndo}
         style={{ lineHeight: '2.5rem' }}
@@ -76,6 +68,14 @@ export default function PdfToolbar({
         style={{ lineHeight: '2.5rem' }}
       >
         Redo
+      </Button>
+
+      <Button
+        className={getButtonClass('watermark')}
+        onClick={onWatermark}
+        style={{ lineHeight: '2.5rem' }}
+      >
+        Watermark
       </Button>
 
       <Button

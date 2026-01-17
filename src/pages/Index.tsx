@@ -27,7 +27,7 @@ export default function Index() {
     files: File[],
     setProgress?: (p: number) => void,
     setStatus?: (s: ConversionStatus) => void,
-    outputOption?: string // <-- new: pdf-to-image format
+    outputOption?: string | number // <-- new: pdf-to-image format
   ): Promise<ConvertedFile[]> => {
     if (!files.length) return [];
 
@@ -44,7 +44,7 @@ export default function Index() {
     files: File[],
     setProgress?: (p: number) => void,
     setStatus?: (s: ConversionStatus) => void,
-    outputOption?: string
+    outputOption?: string | number
   ): Promise<ConvertedFile[]> => {
     if (!files.length || !selectedType) return [];
 
@@ -53,7 +53,7 @@ export default function Index() {
 
     try {
       /**
-       * ✅ SPECIAL CASE: PDF EDIT
+       * SPECIAL CASE: PDF EDIT
        * This is NOT a conversion, it's an editor workflow
        */
       if (selectedType === 'pdf-edit') {
@@ -87,12 +87,23 @@ export default function Index() {
       const endpoint = endpointMap[selectedType];
       if (!endpoint) throw new Error('Unsupported conversion type');
 
+      const options: Record<string, any> = {};
+
+      if (typeof outputOption === 'string') {
+  options.format = outputOption.toLowerCase();
+      }
+
+      if (typeof outputOption === 'number') {
+  options.angle = outputOption;
+      }
+
       const rawResult = await convertWithBackend(
-        files,
-        endpoint,
-        outputOption ? { format: outputOption.toLowerCase() } : {},
-        setProgress
+      files,
+      endpoint,
+      options,
+      setProgress
       );
+
 
       const result = Array.isArray(rawResult) ? rawResult : [rawResult];
       setConvertedFiles(result);

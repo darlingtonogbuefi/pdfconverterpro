@@ -1,0 +1,16 @@
+Host bastion
+    HostName 13.220.68.88
+    User ec2-user
+    IdentityFile C:/Users/Your-User-Account/.ssh/my-new-ec2-key
+
+Host api1
+    HostName 10.0.10.205
+    User ubuntu
+    IdentityFile C:/Users/Your-User-Account/.ssh/my-new-ec2-key
+    ProxyJump bastion
+
+Host api2
+    HostName 10.0.11.54
+    User ubuntu
+    IdentityFile C:/Users/Your-User-Account/.ssh/my-new-ec2-key
+    ProxyJump bastion

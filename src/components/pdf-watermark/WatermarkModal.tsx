@@ -1,9 +1,10 @@
 // src/components/pdf-watermark/WatermarkModal.tsx
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useLayoutEffect } from "react";
 import { pdfWatermark } from "@/lib/converters";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+
 
 const predefinedTexts = [
   "Approved",
@@ -42,10 +43,10 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
   const [verticalBoxes, setVerticalBoxes] = useState(6);
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showBlueBorder, setShowBlueBorder] = useState(true);
+  const textRef = useRef<HTMLDivElement>(null);
+  const placeholderText = "--Predefined Text--";
 
-  const placeholderText = "Predefined Text";
-
-  // Button active logic
   const isApplyActive =
     (type === "image" && image) ||
     (type === "text" && text.trim() !== "" && text !== placeholderText);
@@ -71,7 +72,6 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
     setLoading(true);
 
     try {
-      // Ensure valid text before proceeding
       if (type === "text" && (text.trim() === "" || text === placeholderText)) {
         alert("Please enter valid text or select a predefined text.");
         return;
@@ -107,7 +107,6 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
         imageFile: image || undefined,
       };
 
-      console.log("Watermark Payload:", payload);  // Check the payload
       const finalFile = await pdfWatermark(file, payload);
       onApply(finalFile.url);
     } catch (err: any) {
@@ -117,7 +116,6 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
     }
   };
 
-  // Convert hex to rgba
   const hexToRgba = (hex: string, alpha: number) => {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
@@ -128,7 +126,6 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
   const previewColor = hexToRgba("#999999", 1);
   const previewBrightness = 1 + (1 - opacity) * 0.8;
 
-  // Preview container classes
   const imagePreviewClass =
     "border-2 border-dashed rounded flex items-center justify-center bg-white w-4/5 max-w-full aspect-[2.5/1] relative max-w-[567px] max-h-[227px]";
   const textPreviewClass =
@@ -136,10 +133,45 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
 
   const previewText = text || placeholderText;
 
+  // Auto-scale and center text preview
+  useLayoutEffect(() => {
+    const el = textRef.current;
+    if (!el || !el.parentElement) return;
+
+    const parent = el.parentElement;
+
+    const updateScale = () => {
+      const parentWidth = parent.clientWidth;
+      const parentHeight = parent.clientHeight;
+
+      const angle = tile === "diagonal" ? 45 : 0;
+      const rad = (angle * Math.PI) / 180;
+
+      const elWidth = el.scrollWidth;
+      const elHeight = el.scrollHeight;
+
+      // calculate rotated bounding box
+      const rotatedWidth = Math.abs(elWidth * Math.cos(rad)) + Math.abs(elHeight * Math.sin(rad));
+      const rotatedHeight = Math.abs(elWidth * Math.sin(rad)) + Math.abs(elHeight * Math.cos(rad));
+
+      const scale = Math.min(parentWidth / rotatedWidth, parentHeight / rotatedHeight, 1);
+
+      el.style.transform = `translate(-50%, -50%) rotate(-${angle}deg) scale(${scale})`;
+    };
+
+    updateScale();
+
+    const ro = new ResizeObserver(updateScale);
+    ro.observe(parent);
+
+    return () => ro.disconnect();
+  }, [previewText, tile, opacity, type]);
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
-        className="
+       onClick={() => setShowBlueBorder(false)}
+        className={`
           fixed top-1/2 left-1/2
           transform -translate-x-1/2 -translate-y-1/2
           w-[95%] max-w-3xl
@@ -149,64 +181,74 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
           bg-white
           overflow-auto
           text-xs
-        "
+          ${showBlueBorder ? "border-2 border-blue-600" : "border-0"}
+         `}
       >
         <h2 className="text-sm font-semibold mb-4">Add Watermark</h2>
 
         {/* Tabs */}
-        <div className="flex gap-6 border-b mb-0">
+        <div className="flex gap-6 border-b">
           <button
             onClick={() => setType("image")}
-            className={`pb-1 transition-colors ${
+            className={`relative pb-2 text-xs transition-colors ${
               type === "image"
-                ? "text-blue-600 border-b-2 border-blue-600 font-semibold"
-                : "text-gray-600 hover:text-blue-500"
+                ? "text-blue-600 font-semibold"
+                : "text-gray-600 font-semibold hover:text-blue-500"
             }`}
           >
             Image
+            {type === "image" && (
+              <span className="absolute left-1/2 -bottom-[2px] w-14 h-[2px] -translate-x-1/2 bg-blue-600" />
+            )}
           </button>
 
           <button
             onClick={() => setType("text")}
-            className={`pb-1 transition-colors ${
+            className={`relative pb-2 text-xs transition-colors ${
               type === "text"
-                ? "text-blue-600 border-b-2 border-blue-600 font-semibold"
-                : "text-gray-600 hover:text-blue-500"
+                ? "text-blue-600 font-semibold"
+                : "text-gray-600 font-semibold hover:text-blue-500"
             }`}
           >
             Text
+            {type === "text" && (
+              <span className="absolute left-1/2 -bottom-[2px] w-14 h-[2px] -translate-x-1/2 bg-blue-600" />
+            )}
           </button>
         </div>
 
         {/* Text Watermark */}
         {type === "text" && (
           <>
-            <div className="flex gap-2 w-full">
+            <div className="flex w-full justify-between gap-2 mt-2">
               <input
-                className="border rounded text-xs flex-1 p-1"
+                className="border rounded text-xs p-1 max-w-[300px] w-full"
                 placeholder="Enter Watermark text"
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={(e) => setText(e.target.value.slice(0, 25))}
+                maxLength={25}
               />
+
               <select
-                className="border rounded text-xs p-1 w-52"
+                className="border rounded text-xs p-1 max-w-[300px] w-full"
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={(e) => setText(e.target.value.slice(0, 25))}
               >
                 <option value="">{placeholderText}</option>
                 {predefinedTexts.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
+                  <option key={t} value={t.slice(0, 25)}>
+                    {t.slice(0, 25)}
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* Increased space and helper text */}
+            {/* Preview */}
             <div className="mt-1 flex flex-col items-center">
               <div className={textPreviewClass}>
                 <div
-                  className="select-none text-center max-w-full max-h-full overflow-hidden flex items-center justify-center"
+                  ref={textRef}
+                  className="select-none text-center absolute top-1/2 left-1/2"
                   style={{
                     fontFamily: "Helvetica",
                     fontSize: "clamp(16px,5vw,40px)",
@@ -214,13 +256,14 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
                     opacity,
                     lineHeight: 1,
                     whiteSpace: "nowrap",
-                    transform: `rotate(${tile === "diagonal" ? -45 : 0}deg)`,
+                    transformOrigin: "center center",
+                    transform: `translate(-50%, -50%) rotate(${tile === "diagonal" ? -45 : 0}deg) scale(1)`,
                   }}
                 >
                   {previewText}
                 </div>
               </div>
-              <p className="mt-2 text-gray-500 text-xs">
+              <p className="mt-5 text-gray-500 text-xs">
                 Enter Text or Select Predefined Text
               </p>
             </div>
@@ -229,9 +272,8 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
 
         {/* Image Watermark */}
         {type === "image" && (
-          <div className="mt-3 flex flex-col justify-start items-center w-full">
-            {/* Spacer to match text input + select row height */}
-            <div className="h-9 w-full" />
+          <div className="mt-5 flex flex-col justify-start items-center w-full">
+            <div className="h-8 w-full" />
             <div
               className={`${imagePreviewClass} ${
                 isDragging ? "border-blue-500 bg-blue-50 scale-[1.02]" : ""
@@ -282,20 +324,19 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
               )}
             </div>
 
-            {/* New text under preview that is always visible */}
-            <p className="mt-2 text-gray-500 text-xs">
-              Select or Drag Image
+            <p className="mt-5 text-gray-500 text-xs">
+              Select or Drag and Drop Image
             </p>
           </div>
         )}
 
         {/* Grid + Boxes + Opacity */}
-        <div className="mt-6 w-full flex flex-col md:flex-row justify-between text-xs gap-3">
+        <div className="mt-2 w-full flex flex-col md:flex-row justify-between text-xs gap-3">
           <div className="flex flex-col gap-3 flex-1">
             <div className="flex items-center gap-1.5">
               <label className="w-[10ch] whitespace-nowrap">Grid Type:</label>
               <select
-                className="border rounded px-1 py-0.5 flex-1 text-xs"
+                className="border rounded px-1 py-1 flex-1 text-xs"
                 onChange={(e) => setTile(e.target.value as any)}
                 value={tile}
               >
@@ -324,10 +365,10 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
               <label className="w-[12ch] whitespace-nowrap">Horizontal Boxes:</label>
               <input
                 type="number"
-                min={1}
+                max={15}
                 value={horizontalBoxes}
                 onChange={(e) => setHorizontalBoxes(+e.target.value)}
-                className="border rounded px-1 py-0.5 w-[4ch] text-xs"
+                className="border rounded px-1 py-1 w-[6ch] text-xs"
               />
             </div>
 
@@ -336,9 +377,10 @@ export default function WatermarkModal({ open, onClose, file, onApply }: any) {
               <input
                 type="number"
                 min={1}
+                max={15}
                 value={verticalBoxes}
                 onChange={(e) => setVerticalBoxes(+e.target.value)}
-                className="border rounded px-1 py-0.5 w-[4ch] text-xs"
+                className="border rounded px-1 py-1 w-[6ch] text-xs"
               />
             </div>
           </div>

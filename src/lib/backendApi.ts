@@ -111,7 +111,7 @@ export async function convertWithBackend(
     select_pages?: string;
     compression_level?: string;
     recompress_images?: boolean;
-    angle?: string;
+    angle?: number;
     pdfName?: string;
   } = {},
   onProgress?: (progress: number) => void
@@ -135,7 +135,10 @@ export async function convertWithBackend(
 
   if (options.ocr) formData.append('ocr', 'true');
   if (options.format && endpoint !== 'pdfRotate') formData.append('format', options.format);
-  if (endpoint === 'pdfRotate' && options.angle) formData.append('angle', options.angle);
+  if (endpoint === 'pdfRotate' && options.angle !== undefined) {
+  formData.append('angle', String(options.angle));
+  }
+
   if (endpoint === 'imagesToPdf') {
     const pdfName = options.pdfName || `${filesArray[0].name.split('.')[0]}.pdf`;
     formData.append('pdf_name', pdfName);

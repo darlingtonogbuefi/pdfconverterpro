@@ -71,15 +71,20 @@ export default function PdfSigner({ fileUrl }: Props) {
         },
       };
 
-      const previewButton = {
+      // 🔹 Sign PDF button (opens signature popup)
+      const signButton = {
         type: "custom",
-        id: "preview",
-        title: "Preview PDF",
-        onPress: async () => {
-          const pdfBuffer = await instance.exportPDF();
-          const blob = new Blob([pdfBuffer], { type: "application/pdf" });
-          const url = URL.createObjectURL(blob);
-          window.open(url, "_blank");
+        id: "sign",
+        title: "Sign PDF",
+        onPress: () => {
+          try {
+            // Launch signature tool popup
+            instance.setViewState((viewState: any) =>
+              viewState.set("interactionMode", NutrientViewer.InteractionMode.SIGNATURE)
+            );
+          } catch (err) {
+            console.error("Error opening signature tool:", err);
+          }
         },
       };
 
@@ -95,7 +100,7 @@ export default function PdfSigner({ fileUrl }: Props) {
           backButton,
           undoButton,
           redoButton,
-          previewButton,
+          signButton, // replaces Preview PDF
           { type: "spacer" },
           ...rightItems,
         ];
