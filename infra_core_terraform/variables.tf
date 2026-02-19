@@ -84,7 +84,7 @@ locals {
 }
 
 # ============================
-# SSH public key path
+# SSH public key paths
 # ============================
 variable "ssh_public_key_path" {
   description = "Path to the SSH public key used for EC2 instances"
